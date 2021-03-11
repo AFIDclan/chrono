@@ -1141,7 +1141,7 @@ int box_box(const real3& posT,
         real dist = -Sqrt(Dot(delta, delta));
         *(norm) = delta;
         *(depth) = dist;
-        *(eff_radius) = 0;
+        *(eff_radius) = edge_radius / 2;
         return 1;
 
     } else if (numAxesT == 2 && numAxesO == 2) {
@@ -1224,7 +1224,7 @@ int box_box(const real3& posT,
                     real dist = -Sqrt(Dot(delta, delta));
                     *(norm + j) = delta;
                     *(depth + j) = dist;
-                    *(eff_radius + j) = edge_radius;
+                    *(eff_radius + j) = edge_radius / 2;
                     j++;
                 }
             }
