@@ -180,24 +180,221 @@ uint snap_to_box(const real3& hdims, real3& loc) {
     return code;
 }
 
+// ================TEST=========================
+void clamp_value(real& val, const real& upper_bd, const real& lower_bd) {
+    if (val < lower_bd) {
+        val = lower_bd;
+    }
+
+    if (val > upper_bd) {
+        val = upper_bd;
+    }
+}
+
+/// TEST ============================
+real3 snap_to_face_box(const real3& pt_on_box, uint code, const real3& pt_to_snap, const real3& hdims) {
+    uint side = code >> 1;
+    real3 A;
+    real3 B;
+    real3 C;
+    real3 result = pt_to_snap;
+
+    if (side == 0) {
+        result.x = pt_on_box.x;
+        clamp_value(result.y, hdims.y, -hdims.y);
+        clamp_value(result.z, hdims.z, -hdims.z);
+    } else if (side == 1) {
+        result.y = pt_on_box.y;
+        clamp_value(result.x, hdims.x, -hdims.x);
+        clamp_value(result.z, hdims.z, -hdims.z);
+    } else {
+        result.z = pt_on_box.z;
+        clamp_value(result.x, hdims.x, -hdims.x);
+        clamp_value(result.y, hdims.y, -hdims.y);
+    }
+
+    return result;
+}
+/// TEST ====================
+real3 snap_to_edge(const real3& pt_on_box, uint code, const real3& pt_to_snap, const real3& hdims) {
+    uint axis = (~code & 7) >> 1;
+
+    real3 pt1 = pt_on_box;
+    real3 pt2 = pt_on_box;
+
+    if (axis == 0) {
+        pt1.x = -hdims.x;
+        pt2.x = hdims.x;
+    } else if (axis == 1) {
+        pt1.y = -hdims.y;
+        pt2.y = hdims.y;
+    } else {
+        pt1.z = -hdims.z;
+        pt2.z = hdims.z;
+    }
+
+    real3 edge = pt2 - pt1;
+    real t = Dot((pt_to_snap - pt1), edge) / Length(edge);
+
+    return pt1 + t * edge;
+}
+
+// ======================================TEST===================
+void get_edge_corners(const real3& pt_on_edge, uint code, real3* corners) {
+    code = ((~code & 7) >> 1);
+
+    corners[0] = pt_on_edge;
+    corners[1] = pt_on_edge;
+
+    if (code == 0) {
+        corners[1].x = -corners[1].x;
+    } else if (code == 1) {
+        corners[1].y = -corners[1].y;
+    } else {
+        corners[1].z = -corners[1].z;
+    }
+}
+
+// ================TEST================================
+void get_face_corners(const real3& pt_on_face, uint code, real3* corners) {
+    code = code >> 1;
+
+    corners[0] = pt_on_face;
+    corners[1] = pt_on_face;
+
+    if (code == 0) {
+        corners[1].y = -corners[1].y;
+        corners[2] = corners[1];
+        corners[2].z = -corners[1].z;
+        corners[3] = pt_on_face;
+        corners[3].z = corners[2].z;
+    } else if (code == 1) {
+        corners[1].z = -corners[1].z;
+        corners[2] = corners[1];
+        corners[2].x = -corners[1].x;
+        corners[3] = pt_on_face;
+        corners[3].x = corners[2].x;
+    } else {
+        corners[1].x = -corners[1].x;
+        corners[2] = corners[1];
+        corners[2].y = -corners[1].y;
+        corners[3] = pt_on_face;
+        corners[3].y = corners[2].y;
+    }
+}
+
+bool point_contact_face(const real3& pt_on_face,
+                        uint code,
+                        const real3& pt_to_snap,
+                        real3& result,
+                        real& dist,
+                        const real3& hdims) {
+    code = code >> 1;
+    if (abs(pt_to_snap.x) > hdims.x)
+        return false;
+    if (abs(pt_to_snap.y) > hdims.y)
+        return false;
+    if (abs(pt_to_snap.z) > hdims.z)
+        return false;
+
+    result = pt_to_snap;
+    if (code == 0) {
+        result.x = pt_on_face.x;
+        dist = abs(pt_to_snap.x - pt_on_face.x);
+    } else if (code == 1) {
+        result.y = pt_on_face.y;
+        dist = abs(pt_to_snap.y - pt_on_face.y);
+    } else {
+        result.z = pt_on_face.z;
+        dist = abs(pt_to_snap.z - pt_on_face.z);
+    }
+
+    return dist > 1e-6f;
+}
+
+// =====================TEST=======================
+bool edge_contact_edge(const real3& pt_on_edge,
+                       uint code,
+                       const real3& pt1,
+                       const real3& pt2,
+                       real3& loc1,
+                       real3& loc2,
+                       const real3& hdims) {
+    // Calculate the denominator of the solution. If it is zero, the edges are
+    // parallel and there is no contact.
+    code = (~code & 7) >> 1;
+    real3 seg = pt2 - pt1;
+    real segLen2 = Length(seg);
+    real denom;
+    if (code == 0) {
+        denom = segLen2 - seg.x * seg.x;
+    } else if (code == 1) {
+        denom = segLen2 - seg.y * seg.y;
+    } else {
+        denom = segLen2 - seg.z * seg.z;
+    }
+
+    if (denom < segLen2 * 0.025)
+        return false;
+
+    // Solve for the closest point on the edge. If this point is not on the edge
+    // there is no contact.
+    real3 delta = pt_on_edge - pt1;
+    real tC;
+
+    if (code == 0) {
+        tC = Dot(seg, delta) - seg.x * delta.x;
+    } else if (code == 1) {
+        tC = Dot(seg, delta) - seg.y * delta.y;
+    } else {
+        tC = Dot(seg, delta) - seg.z * delta.z;
+    }
+
+    if (tC <= 0 || tC >= denom)
+        return false;
+
+    tC = tC / denom;
+    loc2 = pt1 + seg * tC;
+
+    // Calculate the closest point on this box's edge. There is contact only if
+    // the point is on the edge.
+    real sC;
+
+    if (code == 0) {
+        sC = seg.x * tC - delta.x;
+    } else if (code == 1) {
+        sC = seg.y * tC - delta.y;
+    } else {
+        sC = seg.z * tC - delta.z;
+    }
+
+    loc1 = pt_on_edge;
+    if (code == 0) {
+        loc1.x = loc1.x + sC;
+        return abs(loc1.x) <= hdims.x;
+    } else if (code == 1) {
+        loc1.y = loc1.y + sC;
+        return abs(loc1.y) <= hdims.y;
+    } else {
+        loc1.z = loc1.z + sC;
+        return abs(loc1.z) <= hdims.z;
+    }
+}
+
 /// This utility function returns the corner of a box of given dimensions that
 /// if farthest in the direction 'dir', which is assumed to be given in the frame of the box.
-real3 box_farthest_corner(const real3& hdims, const real3& dir) {
-    real3 corner;
+void box_farthest_corner(const real3& hdims, const real3& dir, real3& corner) {
     corner.x = (dir.x < 0) ? hdims.x : -hdims.x;
     corner.y = (dir.y < 0) ? hdims.y : -hdims.y;
     corner.z = (dir.z < 0) ? hdims.z : -hdims.z;
-    return corner;
 }
 
 /// This utility function returns the corner of a box of given dimensions that
 /// if closest in the direction 'dir', which is assumed to be given in the frame of the box.
-real3 box_closest_corner(const real3& hdims, const real3& dir) {
-    real3 corner;
+void box_closest_corner(const real3& hdims, const real3& dir, real3& corner) {
     corner.x = (dir.x > 0) ? hdims.x : -hdims.x;
     corner.y = (dir.y > 0) ? hdims.y : -hdims.y;
     corner.z = (dir.z > 0) ? hdims.z : -hdims.z;
-    return corner;
 }
 
 /// This utility function returns a code that indicates the closest feature of
@@ -213,10 +410,18 @@ real3 box_closest_corner(const real3& hdims, const real3& dir) {
 ///   code = 1 or code = 2 or code = 4  indicates a face
 ///   code = 3 or code = 5 or code = 6  indicates an edge
 ///   code = 7 indicates a corner
-uint box_closest_feature(const real3& dir) {
-    const real threshold = 0.01;
+uint box_closest_feature(const real3& dir, const real3& hdims) {
+    return ((Abs(dir.x) > 0) << 0) | ((Abs(dir.y) > 0) << 1) | ((Abs(dir.z) > 0) << 2);
+    /*
+    real3 box_standard_vec;
+    box_standard_vec.x = hdims.x;
+    box_standard_vec.y = hdims.y;
+    box_standard_vec.z = hdims.z;
+    box_standard_vec = Normalize(box_standard_vec);
 
-    return ((Abs(dir.x) > threshold) << 0) | ((Abs(dir.y) > threshold) << 1) | ((Abs(dir.z) > threshold) << 2);
+    return ((Abs(dir.x) > box_standard_vec.x) << 0) | ((Abs(dir.y) > box_standard_vec.y) << 1) |
+           ((Abs(dir.z) > box_standard_vec.z) << 2);
+           */
 }
 
 /// This function returns a boolean indicating whether or not a box1 with
@@ -227,38 +432,48 @@ uint box_closest_feature(const real3& dir) {
 ///
 /// This check is performed by testing 15 possible separating planes between the
 /// two boxes (Gottschalk, Lin, Manocha - Siggraph96).
-bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& pos, const quaternion& rot, real3& dir) {
-    Mat33 R(rot);
+bool box_intersects_box(const real3& hdims1,
+                        const real3& hdims2,
+                        const real3& pos,
+                        const quaternion& rot,
+                        real3& dir,
+                        real& ret_overlap) {
+    Mat33 R(*(rot));
     Mat33 Rabs = Abs(R);
     real minOverlap = FLT_MAX;
     real overlap;
     real r1, r2;
 
+    real gap_threshold = 0;
+
     // 1. Test the axes of box1 (3 cases)
     // x-axis
-    r2 = Rabs[0] * hdims2.x + Rabs[4] * hdims2.y + Rabs[8] * hdims2.z;
+    r2 = Rabs[0] * hdims2.x + Rabs[1] * hdims2.y + Rabs[2] * hdims2.z;
     overlap = hdims1.x + r2 - Abs(pos.x);
-    if (overlap <= 0)
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = real3(1, 0, 0);
         minOverlap = overlap;
     }
     // y-axis
-    r2 = Rabs[1] * hdims2.x + Rabs[5] * hdims2.y + Rabs[9] * hdims2.z;
+    r2 = Rabs[4] * hdims2.x + Rabs[5] * hdims2.y + Rabs[6] * hdims2.z;
     overlap = hdims1.y + r2 - Abs(pos.y);
-    if (overlap <= 0)
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = real3(0, 1, 0);
         minOverlap = overlap;
     }
     // z-axis
-    r2 = Rabs[2] * hdims2.x + Rabs[6] * hdims2.y + Rabs[10] * hdims2.z;
+    r2 = Rabs[8] * hdims2.x + Rabs[9] * hdims2.y + Rabs[10] * hdims2.z;
     overlap = hdims1.z + r2 - Abs(pos.z);
-    if (overlap <= 0)
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = real3(0, 0, 1);
         minOverlap = overlap;
     }
@@ -267,27 +482,32 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
     // x-axis
     r1 = Dot(Rabs.col(0), hdims1);
     overlap = r1 + hdims2.x - Abs(Dot(R.col(0), pos));
-    if (overlap <= 0)
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = R.col(0);
         minOverlap = overlap;
     }
     // y-axis
     r1 = Dot(Rabs.col(1), hdims1);
     overlap = r1 + hdims2.y - Abs(Dot(R.col(1), pos));
-    if (overlap <= 0)
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = R.col(1);
         minOverlap = overlap;
     }
     // z-axis
     r1 = Dot(Rabs.col(2), hdims1);
     overlap = r1 + hdims2.z - Abs(Dot(R.col(2), pos));
-    if (overlap <= 0)
+    // std::cout << "r1" << r1 << std::endl;
+    // std::cout << "r1 overlap: " << overlap << std::endl;
+    if (overlap < 0) {
         return false;
-    if (overlap < minOverlap) {
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
         dir = R.col(2);
         minOverlap = overlap;
     }
@@ -295,9 +515,122 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
     // 3. Test the planes that are orthogonal (the cross-product) to pairs of axes
     // of the two boxes (9 cases)
 
-    //// TODO
+    // case 1  A0 x B0
 
-    return false;
+    r1 = hdims1.y * Rabs[8] + hdims1.z * Rabs[4];
+    r2 = hdims2.y * Rabs[2] + hdims2.z * Rabs[1];
+    overlap = r1 + r2 - (Abs(pos[2] * R[4] - pos[1] * R[8]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(1, 0, 0), R.col(0)));
+        minOverlap = overlap;
+    }
+
+    // case 2  A0 x B1
+    r1 = hdims1.y * Rabs[9] + hdims1.z * Rabs[5];
+    r2 = hdims2.x * Rabs[2] + hdims2.z * Rabs[0];
+    overlap = r1 + r2 - (Abs(pos[2] * R[5] - pos[1] * R[9]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(1, 0, 0), R.col(1)));
+        minOverlap = overlap;
+    }
+
+    // case 3  Test axis L = A0 x B2
+    r1 = hdims1.y * Rabs[10] + hdims1.z * Rabs[6];
+    r2 = hdims2.x * Rabs[1] + hdims2.y * Rabs[0];
+    overlap = r1 + r2 - (Abs(pos[2] * R[6] - pos[1] * R[10]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(1, 0, 0), R.col(2)));
+        minOverlap = overlap;
+    }
+
+    // case 4 Test axis L = A1 x B0
+
+    r1 = hdims1.x * Rabs[8] + hdims1.z * Rabs[0];
+    r2 = hdims2.y * Rabs[6] + hdims2.z * Rabs[5];
+    overlap = r1 + r2 - (Abs(pos[0] * R[8] - pos[2] * R[0]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 1, 0), R.col(0)));
+        minOverlap = overlap;
+    }
+
+    // case 5 Test axis L = A1 x B1
+    r1 = hdims1.x * Rabs[9] + hdims1.z * Rabs[1];
+    r2 = hdims2.x * Rabs[6] + hdims2.z * Rabs[4];
+    overlap = r1 + r2 - (Abs(pos[0] * R[9] - pos[2] * R[1]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 1, 0), R.col(1)));
+        minOverlap = overlap;
+    }
+
+    // case 6 Test axis L = A1 x B2
+
+    r1 = hdims1.x * Rabs[10] + hdims1.z * Rabs[2];
+    r2 = hdims2.x * Rabs[5] + hdims2.y * Rabs[4];
+    overlap = r1 + r2 - (Abs(pos[0] * R[10] - pos[2] * R[2]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 1, 0), R.col(2)));
+        minOverlap = overlap;
+    }
+
+    // case 7 Test axis L = A2 x B0
+
+    r1 = hdims1.x * Rabs[4] + hdims1.y * Rabs[0];
+    r2 = hdims2.y * Rabs[10] + hdims2.z * Rabs[9];
+    overlap = r1 + r2 - (Abs(pos[1] * R[0] - pos[0] * R[4]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 0, 1), R.col(0)));
+        minOverlap = overlap;
+    }
+
+    // case 8 Test axis L = A2 x B1
+
+    r1 = hdims1.x * Rabs[5] + hdims1.y * Rabs[1];
+    r2 = hdims2.x * Rabs[10] + hdims2.z * Rabs[8];
+    overlap = r1 + r2 - (Abs(pos[1] * R[1] - pos[0] * R[5]));
+    if (overlap < 0) {
+        return false;
+    }
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 0, 1), R.col(1)));
+        minOverlap = overlap;
+    }
+
+    // case 9 Test axis L = A2 x B2
+
+    r1 = hdims1.x * Rabs[6] + hdims1.y * Rabs[2];
+    r2 = hdims2.x * Rabs[9] + hdims2.y * Rabs[8];
+    overlap = r1 + r2 - (Abs(pos[1] * R[2] - pos[0] * R[6]));
+    if (overlap < 0)
+        return false;
+    if (overlap < minOverlap && overlap > gap_threshold) {
+        dir = Normalize(Cross(real3(0, 0, 1), R.col(2)));
+        minOverlap = overlap;
+    }
+
+    ret_overlap = minOverlap;
+
+    return true;
 }
 
 /// @} multicore_colision

@@ -16,6 +16,7 @@
 //
 // =============================================================================
 
+#include <new>
 #include "chrono/collision/ChCollisionModel.h"
 
 #include "chrono_multicore/math/ChMulticoreMath.h"
@@ -220,7 +221,7 @@ bool RCollision(const ConvexBase* shapeA,  // first candidate shape
         nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), ct_norm,
                      ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
         //// TODO: Change to true when this is implemented
-        return false;
+        return true;
     }
 
     // Contact could not be checked using this CD algorithm
@@ -1058,7 +1059,7 @@ int box_cylshell(const real3& pos1,
         *(pt1 + j) = TransformLocalToParent(pos1, rot1, boxPoint);
         *(pt2 + j) = TransformLocalToParent(pos1, rot1, cylPoint);
         *(eff_radius + j) = 0.1;
-        ///radius;
+        /// radius;
 
         j++;
     }
@@ -1074,45 +1075,275 @@ int box_cylshell(const real3& pos1,
 // In:  box at position pos1, with orientation rot1, and half-dimensions hdims1
 //      box at position pos2, with orientation rot2, and half-dimensions hdims2
 
-int box_box(const real3& pos1,
-            const quaternion& rot1,
-            const real3& hdims1,
-            const real3& pos2,
-            const quaternion& rot2,
-            const real3& hdims2,
+int box_box(const real3& posT,
+            const quaternion& rotT,
+            const real3& hdimsT,
+            const real3& posO,
+            const quaternion& rotO,
+            const real3& hdimsO,
             real3* norm,
             real* depth,
-            real3* pt1,
-            real3* pt2,
+            real3* ptT,
+            real3* ptO,
             real* eff_radius) {
     // Express the second box into the frame of the first box.
     // (this is a bit cryptic with the functions we have available)
-    real3 pos = RotateT(pos2 - pos1, rot1);
-    quaternion rot = Mult(Inv(rot1), rot2);
+    real3 pos = RotateT(posO - posT, rotT);
+    quaternion rot = Mult(Inv(rotT), rotO);
 
     // Find the direction of closest overlap between boxes. If they don't
     // overlap, we're done. Note that dir is calculated so that it points from
     // box2 to box1.
     real3 dir;
-    if (!box_intersects_box(hdims1, hdims2, pos, rot, dir))
+    real min_overlap;
+    if (!box_intersects_box(hdimsT, hdimsO, pos, rot, dir, min_overlap))
         return 0;
 
     if (Dot(pos, dir) > 0)
         dir = -dir;
 
     // Determine the features of the boxes that are interacting.
-    real3 dirI = RotateT(-dir, rot);
-    real3 corner1 = box_farthest_corner(hdims1, dir);
-    real3 corner2 = box_farthest_corner(hdims2, dirI);
-    uint code1 = box_closest_feature(dir);
-    uint code2 = box_closest_feature(dirI);
-    uint numAxes1 = (code1 & 1) + ((code1 >> 1) & 1) + ((code1 >> 2) & 1);
-    uint numAxes2 = (code2 & 1) + ((code2 >> 1) & 1) + ((code2 >> 2) & 1);
+    real3 dirO = RotateT(-dir, rot);
+    real3 cornerT;
+    box_farthest_corner(hdimsT, dir, cornerT);
+    real3 cornerO;
+    box_farthest_corner(hdimsO, dirO, cornerO);
+    uint codeT = box_closest_feature(dir, hdimsT);
+    uint codeO = box_closest_feature(dirO, hdimsO);
+    uint numAxesT = (codeT & 1) + ((codeT >> 1) & 1) + ((codeT >> 2) & 1);
+    uint numAxesO = (codeO & 1) + ((codeO >> 1) & 1) + ((codeO >> 2) & 1);
 
-    //// TODO
+    // Temp var
+    real3 cornersT[4];
+    real3 cornersO[4];
+    real3 locT;
+    real3 locO;
+    real distance;
 
+    // Generate contact
+    if (numAxesT == 3 || numAxesO == 3) {
+        // corner to corner
+        if (numAxesT == 3) {
+            if (numAxesO == 2) {
+                cornerO = snap_to_edge(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
+            } else if (numAxesO == 1) {
+                cornerO = snap_to_face_box(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
+            }
+        } else if (numAxesT == 2) {
+            cornerT = snap_to_edge(cornerT, codeT, Rotate(cornerO, rot) + pos, hdimsT);
+        } else {
+            cornerT = snap_to_face_box(cornerT, codeO, Rotate(cornerO, rot) + pos, hdimsT);
+        }
+
+        *(ptT) = Rotate(cornerT, rotT) + posT;
+        *(ptO) = Rotate(cornerO, rotO) + posO;
+        real3 delta = *(ptT) - *(ptO);
+        real dist = -Sqrt(Dot(delta, delta));
+        *(norm) = delta;
+        *(depth) = dist;
+        *(eff_radius) = 0;
+        return 1;
+
+    } else if (numAxesT == 2 && numAxesO == 2) {
+        // edge to edge
+        get_edge_corners(cornerO, codeO, cornersO);
+        real3 corner0 = Rotate(cornersO[0], rot) + pos;
+        real3 corner1 = Rotate(cornersO[1], rot) + pos;
+
+        if (edge_contact_edge(cornerT, codeT, corner0, corner1, locT, locO, hdimsT)) {
+            *(ptT) = Rotate(locT, rotT) + posT;
+            *(ptO) = Rotate(locO, rotT) + posT;
+            real3 delta = *(ptT) - *(ptO);
+            real dist = -Sqrt(Dot(delta, delta));
+            *(norm) = delta;
+            *(depth) = dist;
+            *(eff_radius) = edge_radius / 2;
+            return 1;
+        }
+
+    } else if (numAxesT == 1 && numAxesO == 1) {
+        int j = 0;
+        // face to face
+        get_face_corners(cornerT, codeT, cornersT);
+        get_face_corners(cornerO, codeO, cornersO);
+        for (uint i = 0; i < 4; i++) {
+            if (point_contact_face(cornerT, codeT, Rotate(cornersO[i], rot) + pos, locT, distance, hdimsT)) {
+                locT = Rotate(locT, rotT) + posT;
+                locO = Rotate(cornersO[i], rotO) + posO;
+
+                real3 delta = locT - locO;
+                real dist = -Sqrt(Dot(delta, delta));
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+
+            if (point_contact_face(cornerO, codeO, Rotate(cornersT[i] - pos, Inv(rot)), locO, distance, hdimsO)) {
+                locT = Rotate(cornersT[i], rotT) + posT;
+                locO = Rotate(locO, rotO) + posO;
+
+                real3 delta = locT - locO;
+                real dist = -Sqrt(Dot(delta, delta));
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+        }
+
+        // the edges of faceT against the edges of faceO.
+        uint codeTN = (codeT | (codeT >> 1) | (codeT << 2)) & 7;
+        uint codeTP = (codeT | (codeT << 1) | (codeT >> 2)) & 7;
+
+        for (uint i = 0; i < 4; i++) {
+            uint codeE = i & 1 ? codeTP : codeTN;
+
+            for (uint j1 = 0, j2 = 3; j1 < 4; j2 = j1++) {
+                real3 cornerO1 = Rotate(cornersO[j1], rot) + pos;
+                real3 cornerO2 = Rotate(cornersO[j2], rot) + pos;
+
+                if (edge_contact_edge(cornersT[i], codeE, cornerO1, cornerO2, locT, locO, hdimsT)) {
+                    locT = Rotate(locT, rotT) + posT;
+                    locO = Rotate(locO, rotO) + posO;
+
+                    *(ptT + j) = locT;
+                    *(ptO + j) = locO;
+
+                    real3 delta = locT - locO;
+                    real dist = -Sqrt(Dot(delta, delta));
+                    *(norm + j) = delta;
+                    *(depth + j) = dist;
+                    *(eff_radius + j) = edge_radius;
+                    j++;
+                }
+            }
+        }
+
+        return j;
+    }
+
+    else if (numAxesT == 1) {
+        int j = 0;
+        // face to edge
+        get_face_corners(cornerT, codeT, cornersT);
+        get_edge_corners(cornerO, codeO, cornersO);
+
+        for (uint i = 0; i < 2; i++) {
+            if (point_contact_face(cornerT, codeT, Rotate(cornersO[i], rot) + pos, locT, distance, hdimsT)) {
+                locT = Rotate(locT, rotT) + posT;
+                locO = Rotate(cornersO[i], rotO) + posO;
+
+                real3 delta = locT - locO;
+                real dist = -Sqrt(Dot(delta, delta));
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+        }
+
+        // the edges of faceT against edgeO
+        for (uint i1 = 0, i2 = 3; i1 < 4; i2 = i1++) {
+            real3 cornerT1 = Rotate(cornersT[i1] - pos, Inv(rot));
+            real3 cornerT2 = Rotate(cornersT[i2] - pos, Inv(rot));
+
+            if (edge_contact_edge(cornerO, codeO, cornerT1, cornerT2, locO, locT, hdimsO)) {
+                locT = Rotate(locT, rotO) + posO;
+                locO = Rotate(locO, rotO) + posO;
+
+                real3 delta = locT - locO;
+                real dist = -Sqrt(Dot(delta, delta));
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+        }
+
+        return j;
+    } else {
+        int j = 0;
+        get_edge_corners(cornerT, codeT, cornersT);
+        get_face_corners(cornerO, codeO, cornersO);
+
+        for (uint i = 0; i < 2; i++) {
+            if (point_contact_face(cornerO, codeO, Rotate(cornersT[i], Inv(rot)) - pos, locO, distance, hdimsO)) {
+                real3 tempT = Rotate(cornersT[i], rotT) + posT;
+                real3 tempO = Rotate(locO, rotO) + posO;
+
+                real3 delta = tempT - tempO;
+                real dist = -Sqrt(Dot(delta, delta));
+
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+        }
+        // the edges of faceO against edgeT.
+        for (uint i1 = 0, i2 = 3; i1 < 4; i2 = i1++) {
+            real3 cornerO1 = Rotate(cornersO[i1], rot) + pos;
+            real3 cornerO2 = Rotate(cornersO[i2], rot) + pos;
+
+            if (edge_contact_edge(cornerT, codeT, cornerO1, cornerO2, locT, locO, hdimsT)) {
+                real3 tempT = Rotate(locT, rotT) + posT;
+                real3 tempO = Rotate(locO, rotT) + posT;
+
+                real3 delta = tempT - tempO;
+                real dist = -Sqrt(Dot(delta, delta));
+
+                if (abs(dist) < 1e-6) {
+                    continue;
+                }
+
+                *(ptT + j) = locT;
+                *(ptO + j) = locO;
+
+                *(norm + j) = delta;
+                *(depth + j) = dist;
+                *(eff_radius + j) = edge_radius;
+                j++;
+            }
+        }
+
+        return j;
+    }
+
+    // 1 / eff_radius = 1 / R1 + 1 / R2
+    // edge to edge / edge to corner / corner to edge val/2
+    // face to edge / face to corner / edge to face / corner to face val
     return 0;
 }
 
 }  // end namespace collision
-}  // end namespace chrono
+}  // namespace chrono

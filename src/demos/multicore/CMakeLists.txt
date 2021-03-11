@@ -32,6 +32,7 @@ SET(DEMOS
     demo_MCORE_snowMPM
     demo_MCORE_particlesNSC
     demo_MCORE_cratering
+    demo_MCORE_boxcollision
 )
 
 # Add programs that require OpenGL
