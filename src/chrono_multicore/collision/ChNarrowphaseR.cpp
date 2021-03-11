@@ -16,7 +16,6 @@
 //
 // =============================================================================
 
-#include <new>
 #include "chrono/collision/ChCollisionModel.h"
 
 #include "chrono_multicore/math/ChMulticoreMath.h"
@@ -220,7 +219,6 @@ bool RCollision(const ConvexBase* shapeA,  // first candidate shape
     if (shapeA->Type() == ChCollisionShape::Type::BOX && shapeB->Type() == ChCollisionShape::Type::BOX) {
         nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), ct_norm,
                      ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
-        //// TODO: Change to true when this is implemented
         return true;
     }
 
@@ -1231,9 +1229,8 @@ int box_box(const real3& posT,
         }
 
         return j;
-    }
 
-    else if (numAxesT == 1) {
+    } else if (numAxesT == 1) {
         int j = 0;
         // face to edge
         get_face_corners(cornerT, codeT, cornersT);
