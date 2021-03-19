@@ -35,7 +35,7 @@
 #include "chrono/utils/ChUtilsInputOutput.h"
 
 #ifdef CHRONO_OPENGL
-#include "chrono_opengl/ChOpenGLWindow.h"
+    #include "chrono_opengl/ChOpenGLWindow.h"
 #endif
 
 using namespace chrono;
@@ -105,25 +105,35 @@ void AddCollisionBox(ChSystemMulticore* sys) {
     boxMat->SetAdhesion(0);  // Magnitude of the adhesion in Constant adhesion model
 
     int boxId = 0;
-    double mass = 10;
-    ChVector<> size = ChVector<>(0.15, 0.1, 0.1);
+    double mass = 5;
+
     ChVector<> inertia = 1;
 
     for (int i = 0; i < 2; i++) {
-        ChVector<> pos(0.0 + 0.0 * i, 0.0 + 0.4 * i, 0.2 + 0.25 * i);
-
         auto box = chrono_types::make_shared<ChBody>(chrono_types::make_shared<ChCollisionModelMulticore>());
         box->SetIdentifier(boxId++);
         box->SetMass(mass);
         box->SetInertiaXX(inertia);
-        box->SetPos(pos);
-        // ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, CH_C_PI / 6, 0));
-        // box->SetRot(rot);
+        ChVector<> size = ChVector<>(0.0, 0.0, 0.0);
+        if (i == 0) {
+            size = ChVector<>(2.0, 2.0, 0.2);
+            ChVector<> pos(0.0, 0.0, 0.7 + 2.0 / sqrt(2.0));
+            box->SetPos(pos);
+            ChQuaternion<> rot = Q_from_Euler123(ChVector<>(CH_C_PI / 4, 0, 0));
+            box->SetRot(rot);
+        } else {
+            size = ChVector<>(5.0, 5.0, 0.5);
+            ChVector<> pos(0.0, 0.0, 0.0);
+            box->SetPos(pos);
+            ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, 0, 0));
+            box->SetRot(rot);
+        }
+
         if (i == 0) {
             box->SetBodyFixed(false);
         }
         if (i == 1) {
-            box->SetBodyFixed(false);
+            box->SetBodyFixed(true);
         }
 
         box->SetCollide(true);
@@ -146,7 +156,7 @@ int main(int argc, char* argv[]) {
     // ---------------------
 
     double gravity = 9.81;
-    double time_step = 5e-4;
+    double time_step = 2.5e-4;
     double time_end = 20;
 
     double out_fps = 50;
@@ -179,7 +189,7 @@ int main(int argc, char* argv[]) {
 
     // Create the fixed and moving bodies
     // ----------------------------------
-    AddContainer(&msystem);
+    // AddContainer(&msystem);
     AddCollisionBox(&msystem);
 
     // Perform the simulation
@@ -188,7 +198,7 @@ int main(int argc, char* argv[]) {
 #ifdef CHRONO_OPENGL
     opengl::ChOpenGLWindow& gl_window = opengl::ChOpenGLWindow::getInstance();
     gl_window.Initialize(1280, 720, "boxSMC", &msystem);
-    gl_window.SetCamera(ChVector<>(0, -5, 3), ChVector<>(0, 0, 0), ChVector<>(0, 0, 1));
+    gl_window.SetCamera(ChVector<>(0, -5, 0), ChVector<>(0, 0, 0), ChVector<>(0, 0, 1));
     gl_window.SetRenderMode(opengl::WIREFRAME);
 
     // Uncomment the following two lines for the OpenGL manager to automatically

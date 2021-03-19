@@ -109,6 +109,179 @@ TEST(ChNarrowphaseR, snap_to_cylinder) {
     }
 }
 
+TEST(ChNarrowphaseR, snap_to_face_box) {
+    {
+        {
+            // z dir / in range
+            real3 pt_on_box(1.0, 2.0, 3.0);
+            real3 hdims(1.0, 2.0, 3.0);
+            real3 pt_to_snap(0.1, 0.3, 2.0);
+            uint code = 1 << 2;
+            real3 result = snap_to_face_box(pt_on_box, code, pt_to_snap, hdims);
+            Assert_near(result, real3(0.1, 0.3, 3.0), precision);
+        }
+
+        {
+            // z dir / out of range
+            real3 pt_on_box(1.0, 2.0, 3.0);
+            real3 hdims(1.0, 2.0, 3.0);
+            real3 pt_to_snap(1.7, -2.5, 4.0);
+            uint code = 1 << 2;
+            real3 result = snap_to_face_box(pt_on_box, code, pt_to_snap, hdims);
+            Assert_near(result, real3(1.0, -2.0, 3.0), precision);
+        }
+    }
+}
+
+TEST(ChNarrowphaseR, get_face_corners) {
+    {
+        {
+            // dir z / inside
+            real3 pt_on_box(1.0, 2.0, 3.0);
+            real3 hdims(1.0, 2.0, 3.0);
+            uint code = 1 << 2;
+            real3 corners[4];
+
+            get_face_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(1, 2, 3), precision);
+            Assert_near(corners[1], real3(-1, 2, 3), precision);
+            Assert_near(corners[2], real3(-1, -2, 3), precision);
+            Assert_near(corners[3], real3(1, -2, 3), precision);
+        }
+
+        {
+            // dir y / inside
+            real3 pt_on_box(1.0, 2.0, 3.0);
+            real3 hdims(1.0, 2.0, 3.0);
+            uint code = 1 << 1;
+            real3 corners[4];
+
+            get_face_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(1.0, 2.0, 3.0), precision);
+            Assert_near(corners[1], real3(1.0, 2.0, -3.0), precision);
+            Assert_near(corners[2], real3(-1.0, 2.0, -3.0), precision);
+            Assert_near(corners[3], real3(-1.0, 2.0, 3.0), precision);
+        }
+    }
+}
+
+TEST(ChNarrowphaseR, get_edge_corners) {
+    {
+        {
+            // dir x
+            real3 pt_on_box(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            uint code = 6;
+            real3 corners[4];
+
+            get_edge_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(1, 2, 3), precision);
+            Assert_near(corners[1], real3(-1, 2, 3), precision);
+        }
+
+        {
+            // dir y
+            real3 pt_on_box(1, -2, -3);
+            real3 hdims(1, 2, 3);
+            uint code = 5;
+            real3 corners[4];
+
+            get_edge_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(1, -2, -3), precision);
+            Assert_near(corners[1], real3(1, 2, -3), precision);
+        }
+
+        {
+            // dir z
+            real3 pt_on_box(-1, 2, -3);
+            real3 hdims(1, 2, 3);
+            uint code = 3;
+            real3 corners[4];
+
+            get_edge_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(-1, 2, -3), precision);
+            Assert_near(corners[1], real3(-1, 2, 3), precision);
+        }
+    }
+}
+
+TEST(ChNarrowphaseR, point_contact_face) {
+    {
+        {
+            // dir z | valid contact
+            real3 pt_on_face(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(0.4, 0.8, 2.5);
+            uint code = 4;
+            real3 result;
+            real dist;
+            bool res = false;
+
+            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            Assert_near(result, real3(0.4, 0.8, 3), precision);
+        }
+
+        {
+            // dir y | valid contact
+            real3 pt_on_face(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(0.5, 1.4, 2);
+            uint code = 2;
+            real3 result;
+            real dist;
+            bool res = false;
+
+            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            Assert_near(result, real3(0.5, 2, 2), precision);
+        }
+
+        {
+            // dir x | valid contact
+            real3 pt_on_face(-1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(-0.9, 1.4, 2);
+            uint code = 1;
+            real3 result;
+            real dist;
+            bool res = false;
+
+            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            Assert_near(result, real3(-1, 1.4, 2), precision);
+        }
+
+        {
+            // dir z | invalid contact
+            real3 pt_on_face(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(1.4, 0.8, 2.5);
+            uint code = 4;
+            real3 result;
+            real dist;
+            bool res = false;
+
+            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+        }
+    }
+}
+
+TEST(ChNarrowphaseR, edge_contact_edge) {
+    {
+        {
+            real3 pt_on_edge(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(0.4, 0.8, 2.5);
+            uint code = 5;
+            real3 pt_1(0.5, 0.2, 2.5);
+            real3 pt_2(1.5, 0.2, 2.5);
+            real3 loc1;
+            real3 loc2;
+
+            ASSERT_TRUE(edge_contact_edge(pt_on_edge, code, pt_1, pt_2, loc1, loc2, hdims));
+            Assert_near(loc1, real3(1, 0.2, 3), precision);
+            Assert_near(loc2, real3(1, 0.2, 2.5), precision);
+        }
+    }
+}
 // =============================================================================
 // Tests for various primitive collision functions
 // =============================================================================
@@ -120,6 +293,157 @@ class Collision : public ::testing::Test, public ::testing::WithParamInterface<b
   protected:
     bool sep;
 };
+
+TEST_P(Collision, box_box) {
+    real separation = sep ? 0.1 : 0.0;
+    // Output quantities.
+    real3* norm = new real3[8];
+    real3* pt1 = new real3[8];
+    real3* pt2 = new real3[8];
+    real* depth = new real[8];
+    real* eff_rad = new real[8];
+    int nC;
+
+    // face to face | stack
+    {
+        real3 hdims1(1.0, 2.0, 3.0);
+        real3 pos1(0.0, 0.0, 0.0);
+        quaternion rot1 = quaternion(1, 0, 0, 0);
+
+        real3 hdims2(1.0, 2.0, 3.0);
+        real3 pos2(0.0, 0.0, 5.0);
+        quaternion rot2 = quaternion(1, 0, 0, 0);
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_NEAR(nC, 8, precision);
+        ASSERT_NEAR(depth[0], -1.0, precision);
+        ASSERT_NEAR(depth[1], -1.0, precision);
+        ASSERT_NEAR(depth[2], -1.0, precision);
+        ASSERT_NEAR(depth[3], -1.0, precision);
+        ASSERT_NEAR(depth[4], -1.0, precision);
+        ASSERT_NEAR(depth[5], -1.0, precision);
+        ASSERT_NEAR(depth[6], -1.0, precision);
+        ASSERT_NEAR(depth[7], -1.0, precision);
+        Assert_near(norm[0], real3(0, 0, 1), precision);
+        Assert_near(norm[1], real3(0, 0, 1), precision);
+        Assert_near(norm[2], real3(0, 0, 1), precision);
+        Assert_near(norm[3], real3(0, 0, 1), precision);
+        Assert_near(norm[4], real3(0, 0, 1), precision);
+        Assert_near(norm[5], real3(0, 0, 1), precision);
+        Assert_near(norm[6], real3(0, 0, 1), precision);
+        Assert_near(norm[7], real3(0, 0, 1), precision);
+    }
+
+    // face to face | stack with rotation
+    {
+        real3 hdims1(1.0, 2.0, 3.0);
+        real3 pos1(0.0, 0.0, 0.0);
+        quaternion rot1 = quaternion(1, 0, 0, 0);
+
+        real3 hdims2(1.0, 2.0, 3.0);
+        real3 pos2(0.0, 0.0, 5.0);
+        quaternion rot2 = ToQuaternion(Q_from_AngAxis(CH_C_PI_4, ChVector<>(0, 0, 1)));
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_NEAR(nC, 8, precision);
+        ASSERT_NEAR(depth[0], -1.0, precision);
+        ASSERT_NEAR(depth[1], -1.0, precision);
+        ASSERT_NEAR(depth[2], -1.0, precision);
+        ASSERT_NEAR(depth[3], -1.0, precision);
+        ASSERT_NEAR(depth[4], -1.0, precision);
+        ASSERT_NEAR(depth[5], -1.0, precision);
+        ASSERT_NEAR(depth[6], -1.0, precision);
+        ASSERT_NEAR(depth[7], -1.0, precision);
+        Assert_near(norm[0], real3(0, 0, 1), precision);
+        Assert_near(norm[1], real3(0, 0, 1), precision);
+        Assert_near(norm[2], real3(0, 0, 1), precision);
+        Assert_near(norm[3], real3(0, 0, 1), precision);
+        Assert_near(norm[4], real3(0, 0, 1), precision);
+        Assert_near(norm[5], real3(0, 0, 1), precision);
+        Assert_near(norm[6], real3(0, 0, 1), precision);
+        Assert_near(norm[7], real3(0, 0, 1), precision);
+    }
+
+    // face to edge
+    {
+        real3 hdims1(2.0, 2.0, 0.2);
+        real3 pos1(0.0, 0.0, 0.3 + 2.0 / sqrt(2.0));
+        quaternion rot1 = ToQuaternion(Q_from_AngAxis(CH_C_PI / 4, ChVector<>(1, 0, 0)));
+
+        real3 hdims2(5.0, 5.0, 0.5);
+        real3 pos2(0.0, 0.0, 0.0);
+        quaternion rot2 = quaternion(1, 0, 0, 0);
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_NEAR(nC, 2, precision);
+    }
+
+    // face to face || small on large, in range
+    {
+        real3 hdims1(2.0, 2.0, 0.2);
+        real3 pos1(0.0, 0.0, 0.6);
+        quaternion rot1 = quaternion(1, 0, 0, 0);
+
+        real3 hdims2(5.0, 5.0, 0.5);
+        real3 pos2(0.0, 0.0, 0.0);
+        quaternion rot2 = quaternion(1, 0, 0, 0);
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_NEAR(nC, 4, precision);
+        Assert_near(norm[0], real3(0, 0, -1), precision);
+        Assert_near(norm[1], real3(0, 0, -1), precision);
+        Assert_near(norm[2], real3(0, 0, -1), precision);
+        Assert_near(norm[3], real3(0, 0, -1), precision);
+        ASSERT_NEAR(depth[0], -0.1, precision);
+        ASSERT_NEAR(depth[1], -0.1, precision);
+        ASSERT_NEAR(depth[2], -0.1, precision);
+        ASSERT_NEAR(depth[3], -0.1, precision);
+    }
+}
 
 TEST_P(Collision, sphere_sphere) {
     ConvexShapeCustom* shapeS1 = new ConvexShapeCustom();
@@ -673,4 +997,3 @@ TEST_P(Collision, roundedcyl_sphere) {
 }
 
 INSTANTIATE_TEST_CASE_P(R, Collision, ::testing::Bool());
-

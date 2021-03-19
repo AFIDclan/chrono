@@ -1110,7 +1110,6 @@ int box_box(const real3& posT,
     uint codeO = box_closest_feature(dirO, hdimsO);
     uint numAxesT = (codeT & 1) + ((codeT >> 1) & 1) + ((codeT >> 2) & 1);
     uint numAxesO = (codeO & 1) + ((codeO >> 1) & 1) + ((codeO >> 2) & 1);
-
     // Temp var
     real3 cornersT[4];
     real3 cornersO[4];
@@ -1118,11 +1117,16 @@ int box_box(const real3& posT,
     real3 locO;
     real distance;
 
+    // std::cout << "dir:" << dir.x << "," << dir.y << "," << dir.z << std::endl;
+    // std::cout << "dirO:" << dirO.x << "," << dirO.y << "," << dirO.z << std::endl;
     // Generate contact
     if (numAxesT == 3 || numAxesO == 3) {
-        // corner to corner
+        // std::cout << "33" << std::endl;
+        // T corner to X, or X to O corner
         if (numAxesT == 3) {
+            // T corner to X
             if (numAxesO == 2) {
+                // T corner to O edge
                 cornerO = snap_to_edge(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
             } else if (numAxesO == 1) {
                 cornerO = snap_to_face_box(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
@@ -1130,19 +1134,19 @@ int box_box(const real3& posT,
         } else if (numAxesT == 2) {
             cornerT = snap_to_edge(cornerT, codeT, Rotate(cornerO, rot) + pos, hdimsT);
         } else {
-            cornerT = snap_to_face_box(cornerT, codeO, Rotate(cornerO, rot) + pos, hdimsT);
+            cornerT = snap_to_face_box(cornerT, codeT, Rotate(cornerO, rot) + pos, hdimsT);
         }
 
         *(ptT) = Rotate(cornerT, rotT) + posT;
         *(ptO) = Rotate(cornerO, rotO) + posO;
         real3 delta = *(ptT) - *(ptO);
         real dist = -Sqrt(Dot(delta, delta));
-        *(norm) = delta;
+        *(norm) = delta / abs(dist);
         *(depth) = dist;
         *(eff_radius) = edge_radius / 2;
         return 1;
-
     } else if (numAxesT == 2 && numAxesO == 2) {
+        // std::cout << "22" << std::endl;
         // edge to edge
         get_edge_corners(cornerO, codeO, cornersO);
         real3 corner0 = Rotate(cornersO[0], rot) + pos;
@@ -1153,13 +1157,13 @@ int box_box(const real3& posT,
             *(ptO) = Rotate(locO, rotT) + posT;
             real3 delta = *(ptT) - *(ptO);
             real dist = -Sqrt(Dot(delta, delta));
-            *(norm) = delta;
+            *(norm) = delta / abs(dist);
             *(depth) = dist;
             *(eff_radius) = edge_radius / 2;
             return 1;
         }
-
     } else if (numAxesT == 1 && numAxesO == 1) {
+        // std::cout << "11" << std::endl;
         int j = 0;
         // face to face
         get_face_corners(cornerT, codeT, cornersT);
@@ -1176,7 +1180,7 @@ int box_box(const real3& posT,
                 }
                 *(ptT + j) = locT;
                 *(ptO + j) = locO;
-                *(norm + j) = delta;
+                *(norm + j) = delta / abs(dist);
                 *(depth + j) = dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
@@ -1193,7 +1197,7 @@ int box_box(const real3& posT,
                 }
                 *(ptT + j) = locT;
                 *(ptO + j) = locO;
-                *(norm + j) = delta;
+                *(norm + j) = delta / abs(dist);
                 *(depth + j) = dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
@@ -1213,14 +1217,14 @@ int box_box(const real3& posT,
 
                 if (edge_contact_edge(cornersT[i], codeE, cornerO1, cornerO2, locT, locO, hdimsT)) {
                     locT = Rotate(locT, rotT) + posT;
-                    locO = Rotate(locO, rotO) + posO;
+                    locO = Rotate(locO, rotT) + posT;
 
                     *(ptT + j) = locT;
                     *(ptO + j) = locO;
 
                     real3 delta = locT - locO;
                     real dist = -Sqrt(Dot(delta, delta));
-                    *(norm + j) = delta;
+                    *(norm + j) = delta / abs(dist);
                     *(depth + j) = dist;
                     *(eff_radius + j) = edge_radius / 2;
                     j++;
@@ -1229,28 +1233,25 @@ int box_box(const real3& posT,
         }
 
         return j;
-
     } else if (numAxesT == 1) {
+        std::cout << "1" << std::endl;
         int j = 0;
         // face to edge
         get_face_corners(cornerT, codeT, cornersT);
         get_edge_corners(cornerO, codeO, cornersO);
-
+        dir = Rotate(dir, rotT);
         for (uint i = 0; i < 2; i++) {
+            // std::cout << cornersO[i].x << "," << cornersO[i].y << "," << cornersO[i].z << std::endl;
+            real3 print = Rotate(cornersO[i], rot) + pos;
+            std::cout << print.x << "," << print.y << "," << print.z << std::endl;
             if (point_contact_face(cornerT, codeT, Rotate(cornersO[i], rot) + pos, locT, distance, hdimsT)) {
-                locT = Rotate(locT, rotT) + posT;
-                locO = Rotate(cornersO[i], rotO) + posO;
+                real3 tempT = Rotate(locT, rotT) + posT;
+                real3 tempO = Rotate(cornersO[i], rotO) + posO;
 
-                real3 delta = locT - locO;
-                real dist = -Sqrt(Dot(delta, delta));
-                if (abs(dist) < 1e-6) {
-                    continue;
-                }
-
-                *(ptT + j) = locT;
-                *(ptO + j) = locO;
-                *(norm + j) = delta;
-                *(depth + j) = dist;
+                *(ptT + j) = tempT;
+                *(ptO + j) = tempO;
+                *(norm + j) = -dir;
+                *(depth + j) = -distance;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1262,11 +1263,12 @@ int box_box(const real3& posT,
             real3 cornerT2 = Rotate(cornersT[i2] - pos, Inv(rot));
 
             if (edge_contact_edge(cornerO, codeO, cornerT1, cornerT2, locO, locT, hdimsO)) {
-                locT = Rotate(locT, rotO) + posO;
-                locO = Rotate(locO, rotO) + posO;
+                real3 tempT = Rotate(locT, rotO) + posO;
+                real3 tempO = Rotate(locO, rotO) + posO;
 
-                real3 delta = locT - locO;
+                real3 delta = tempT - tempO;
                 real dist = -Sqrt(Dot(delta, delta));
+
                 if (abs(dist) < 1e-6) {
                     continue;
                 }
@@ -1274,7 +1276,7 @@ int box_box(const real3& posT,
                 *(ptT + j) = locT;
                 *(ptO + j) = locO;
 
-                *(norm + j) = delta;
+                *(norm + j) = delta / abs(dist);
                 *(depth + j) = dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
@@ -1288,7 +1290,7 @@ int box_box(const real3& posT,
         get_face_corners(cornerO, codeO, cornersO);
 
         for (uint i = 0; i < 2; i++) {
-            if (point_contact_face(cornerO, codeO, Rotate(cornersT[i], Inv(rot)) - pos, locO, distance, hdimsO)) {
+            if (point_contact_face(cornerO, codeO, Rotate(cornersT[i] - pos, Inv(rot)), locO, distance, hdimsO)) {
                 real3 tempT = Rotate(cornersT[i], rotT) + posT;
                 real3 tempO = Rotate(locO, rotO) + posO;
 
@@ -1299,9 +1301,9 @@ int box_box(const real3& posT,
                     continue;
                 }
 
-                *(ptT + j) = locT;
-                *(ptO + j) = locO;
-                *(norm + j) = delta;
+                *(ptT + j) = tempT;
+                *(ptO + j) = tempO;
+                *(norm + j) = delta / abs(dist);
                 *(depth + j) = dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
@@ -1323,10 +1325,10 @@ int box_box(const real3& posT,
                     continue;
                 }
 
-                *(ptT + j) = locT;
-                *(ptO + j) = locO;
+                *(ptT + j) = tempT;
+                *(ptO + j) = tempO;
 
-                *(norm + j) = delta;
+                *(norm + j) = delta / abs(dist);
                 *(depth + j) = dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
