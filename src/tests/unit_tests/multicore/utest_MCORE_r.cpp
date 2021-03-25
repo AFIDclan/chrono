@@ -215,7 +215,6 @@ TEST(ChNarrowphaseR, point_contact_face) {
             uint code = 4;
             real3 result;
             real dist;
-            bool res = false;
 
             ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
             Assert_near(result, real3(0.4, 0.8, 3), precision);
@@ -229,7 +228,6 @@ TEST(ChNarrowphaseR, point_contact_face) {
             uint code = 2;
             real3 result;
             real dist;
-            bool res = false;
 
             ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
             Assert_near(result, real3(0.5, 2, 2), precision);
@@ -243,7 +241,6 @@ TEST(ChNarrowphaseR, point_contact_face) {
             uint code = 1;
             real3 result;
             real dist;
-            bool res = false;
 
             ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
             Assert_near(result, real3(-1, 1.4, 2), precision);
@@ -257,7 +254,6 @@ TEST(ChNarrowphaseR, point_contact_face) {
             uint code = 4;
             real3 result;
             real dist;
-            bool res = false;
 
             ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
         }
