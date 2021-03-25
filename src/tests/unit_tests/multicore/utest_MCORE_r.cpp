@@ -322,7 +322,7 @@ TEST_P(Collision, box_box) {
         shape2->dimensions = hdims2;
         shape2->rotation = rot2;
         ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
-        ASSERT_NEAR(nC, 8, precision);
+        ASSERT_EQ(nC, 8);
         ASSERT_NEAR(depth[0], -1.0, precision);
         ASSERT_NEAR(depth[1], -1.0, precision);
         ASSERT_NEAR(depth[2], -1.0, precision);
@@ -363,7 +363,7 @@ TEST_P(Collision, box_box) {
         shape2->dimensions = hdims2;
         shape2->rotation = rot2;
         ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
-        ASSERT_NEAR(nC, 8, precision);
+        ASSERT_EQ(nC, 8);
         ASSERT_NEAR(depth[0], -1.0, precision);
         ASSERT_NEAR(depth[1], -1.0, precision);
         ASSERT_NEAR(depth[2], -1.0, precision);
@@ -404,7 +404,7 @@ TEST_P(Collision, box_box) {
         shape2->dimensions = hdims2;
         shape2->rotation = rot2;
         ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
-        ASSERT_NEAR(nC, 2, precision);
+        ASSERT_EQ(nC, 2);
     }
 
     // face to face || small on large, in range
@@ -429,7 +429,7 @@ TEST_P(Collision, box_box) {
         shape2->dimensions = hdims2;
         shape2->rotation = rot2;
         ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
-        ASSERT_NEAR(nC, 4, precision);
+        ASSERT_EQ(nC, 4);
         Assert_near(norm[0], real3(0, 0, -1), precision);
         Assert_near(norm[1], real3(0, 0, -1), precision);
         Assert_near(norm[2], real3(0, 0, -1), precision);
@@ -438,6 +438,83 @@ TEST_P(Collision, box_box) {
         ASSERT_NEAR(depth[1], -0.1, precision);
         ASSERT_NEAR(depth[2], -0.1, precision);
         ASSERT_NEAR(depth[3], -0.1, precision);
+    }
+
+    // face to face, small penetration
+    {
+        real penetration = 1e-5;
+
+        real3 hdims1(1, 1, 0.1);
+        real3 pos1(0, 0, -0.1);
+        quaternion rot1(1, 0, 0, 0);
+
+        real3 hdims2(0.5, 0.5, 0.1);
+        real3 pos2(0, 0, +0.1 - penetration);
+        quaternion rot2(1, 0, 0, 0);
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+
+        // In this configuration, we expect 4 collisions, each with a depth equal to the
+        // specified penetration and normals in the Z-direction.
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_EQ(nC, 4);
+
+        ASSERT_NEAR(depth[0], -penetration, precision);
+        ASSERT_NEAR(depth[1], -penetration, precision);
+        ASSERT_NEAR(depth[2], -penetration, precision);
+        ASSERT_NEAR(depth[3], -penetration, precision);
+
+        ASSERT_NEAR(Dot(norm[0], real3(1, 0, 0)), 0, precision);
+        ASSERT_NEAR(Dot(norm[0], real3(0, 1, 0)), 0, precision);
+
+        ASSERT_NEAR(Dot(norm[1], real3(1, 0, 0)), 0, precision);
+        ASSERT_NEAR(Dot(norm[1], real3(0, 1, 0)), 0, precision);
+
+        ASSERT_NEAR(Dot(norm[2], real3(1, 0, 0)), 0, precision);
+        ASSERT_NEAR(Dot(norm[2], real3(0, 1, 0)), 0, precision);
+
+        ASSERT_NEAR(Dot(norm[3], real3(1, 0, 0)), 0, precision);
+        ASSERT_NEAR(Dot(norm[3], real3(0, 1, 0)), 0, precision);
+    }
+
+    // face to face, very small penetration
+    {
+        real penetration = 1e-8;
+
+        real3 hdims1(1, 1, 0.1);
+        real3 pos1(0, 0, -0.1);
+        quaternion rot1(1, 0, 0, 0);
+
+        real3 hdims2(0.5, 0.5, 0.1);
+        real3 pos2(0, 0, +0.1-penetration);
+        quaternion rot2(1, 0, 0, 0);
+
+        ConvexShapeCustom* shape1 = new ConvexShapeCustom();
+        shape1->type = ChCollisionShape::Type::BOX;
+        shape1->position = pos1;
+        shape1->dimensions = hdims1;
+        shape1->rotation = rot1;
+
+        ConvexShapeCustom* shape2 = new ConvexShapeCustom();
+        shape2->type = ChCollisionShape::Type::BOX;
+        shape2->position = pos2;
+        shape2->dimensions = hdims2;
+        shape2->rotation = rot2;
+
+        // Note: at this very small penetration, no collision pairs should be generated
+        // (below the valious tolerances used in the box-box algorithm).
+        ASSERT_TRUE(RCollision(shape1, shape2, separation, norm, pt1, pt2, depth, eff_rad, nC));
+        ASSERT_EQ(nC, 0);
     }
 }
 
