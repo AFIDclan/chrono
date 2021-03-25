@@ -8,21 +8,6 @@
 // in the LICENSE file at the top level of the distribution and at
 // http://projectchrono.org/license-chrono.txt.
 //
-// =============================================================================
-// Authors: Radu Serban
-// =============================================================================
-//
-// Chrono::Multicore test program using SMC method for frictional contact.
-//
-// The model simulated here consists of a number of spherical objects falling
-// in a fixed container.
-//
-// The global reference frame has Z up.
-//
-// If available, OpenGL is used for run-time rendering. Otherwise, the
-// simulation is carried out for a pre-defined duration and output files are
-// generated for post-processing with POV-Ray.
-// =============================================================================
 
 #include <cstdio>
 #include <vector>
@@ -80,14 +65,14 @@ void AddContainer(ChSystemMulticoreSMC* sys) {
 
     bin->GetCollisionModel()->ClearModel();
     utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hdim.x(), hdim.y(), hthick), ChVector<>(0, 0, -hthick));
-    utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hthick, hdim.y(), hdim.z()),
-                          ChVector<>(-hdim.x() - hthick, 0, hdim.z()));
-    utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hthick, hdim.y(), hdim.z()),
-                          ChVector<>(hdim.x() + hthick, 0, hdim.z()));
-    utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hdim.x(), hthick, hdim.z()),
-                          ChVector<>(0, -hdim.y() - hthick, hdim.z()));
-    utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hdim.x(), hthick, hdim.z()),
-                          ChVector<>(0, hdim.y() + hthick, hdim.z()));
+    // utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hthick, hdim.y(), hdim.z()),
+    //                      ChVector<>(-hdim.x() - hthick, 0, hdim.z()));
+    // utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hthick, hdim.y(), hdim.z()),
+    //                      ChVector<>(hdim.x() + hthick, 0, hdim.z()));
+    // utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hdim.x(), hthick, hdim.z()),
+    //                      ChVector<>(0, -hdim.y() - hthick, hdim.z()));
+    // utils::AddBoxGeometry(bin.get(), mat, ChVector<>(hdim.x(), hthick, hdim.z()),
+    //                      ChVector<>(0, hdim.y() + hthick, hdim.z()));
     bin->GetCollisionModel()->BuildModel();
 
     sys->AddBody(bin);
@@ -105,35 +90,27 @@ void AddCollisionBox(ChSystemMulticore* sys) {
     boxMat->SetAdhesion(0);  // Magnitude of the adhesion in Constant adhesion model
 
     int boxId = 0;
-    double mass = 5;
-
+    double mass = 10;
+    ChVector<> size = ChVector<>(0.15, 0.1, 0.1);
     ChVector<> inertia = 1;
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 1; i++) {
+        ChVector<> pos(0.0 + 0.4 * i, 1.6 + 0.4 * i, 0.3 + 0.3 * i);
+        ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, 0, 0));
+
         auto box = chrono_types::make_shared<ChBody>(chrono_types::make_shared<ChCollisionModelMulticore>());
         box->SetIdentifier(boxId++);
         box->SetMass(mass);
         box->SetInertiaXX(inertia);
-        ChVector<> size = ChVector<>(0.0, 0.0, 0.0);
-        if (i == 0) {
-            size = ChVector<>(2.0, 2.0, 0.2);
-            ChVector<> pos(0.0, 0.0, 0.7 + 2.0 / sqrt(2.0));
-            box->SetPos(pos);
-            ChQuaternion<> rot = Q_from_Euler123(ChVector<>(CH_C_PI / 4, 0, 0));
-            box->SetRot(rot);
-        } else {
-            size = ChVector<>(5.0, 5.0, 0.5);
-            ChVector<> pos(0.0, 0.0, 0.0);
-            box->SetPos(pos);
-            ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, 0, 0));
-            box->SetRot(rot);
-        }
-
+        box->SetPos(pos);
+        // box->SetRot(rot);
+        // ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, CH_C_PI / 6, 0));
+        box->SetRot(rot);
         if (i == 0) {
             box->SetBodyFixed(false);
         }
         if (i == 1) {
-            box->SetBodyFixed(true);
+            box->SetBodyFixed(false);
         }
 
         box->SetCollide(true);
@@ -156,7 +133,7 @@ int main(int argc, char* argv[]) {
     // ---------------------
 
     double gravity = 9.81;
-    double time_step = 2.5e-4;
+    double time_step = 1e-4;
     double time_end = 20;
 
     double out_fps = 50;
@@ -189,7 +166,7 @@ int main(int argc, char* argv[]) {
 
     // Create the fixed and moving bodies
     // ----------------------------------
-    // AddContainer(&msystem);
+    AddContainer(&msystem);
     AddCollisionBox(&msystem);
 
     // Perform the simulation
