@@ -514,115 +514,148 @@ bool box_intersects_box(const real3& hdims1,
 
     // case 1  A0 x B0
 
+    real axisLen;
+
     r1 = hdims1.y * Rabs[2] + hdims1.z * Rabs[1];
     r2 = hdims2.y * Rabs[8] + hdims2.z * Rabs[4];
     overlap = r1 + r2 - (Abs(pos[2] * R[1] - pos[1] * R[2]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(1, 0, 0), R.col(0)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(1, 0, 0), R.col(0)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(1, 0, 0), R.col(0)));
+            minOverlap = overlap;
+        }
     }
 
     // case 2  A0 x B1
     r1 = hdims1.y * Rabs[6] + hdims1.z * Rabs[5];
     r2 = hdims2.x * Rabs[8] + hdims2.z * Rabs[0];
     overlap = r1 + r2 - (Abs(pos[2] * R[5] - pos[1] * R[6]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(1, 0, 0), R.col(1)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(1, 0, 0), R.col(1)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(1, 0, 0), R.col(1)));
+            minOverlap = overlap;
+        }
     }
 
     // case 3  Test axis L = A0 x B2
     r1 = hdims1.y * Rabs[10] + hdims1.z * Rabs[9];
     r2 = hdims2.x * Rabs[4] + hdims2.y * Rabs[0];
     overlap = r1 + r2 - (Abs(pos[2] * R[9] - pos[1] * R[10]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(1, 0, 0), R.col(2)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(1, 0, 0), R.col(2)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(1, 0, 0), R.col(2)));
+            minOverlap = overlap;
+        }
     }
 
     // case 4 Test axis L = A1 x B0
-
     r1 = hdims1.x * Rabs[2] + hdims1.z * Rabs[0];
     r2 = hdims2.y * Rabs[9] + hdims2.z * Rabs[5];
     overlap = r1 + r2 - (Abs(pos[0] * R[2] - pos[2] * R[0]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 1, 0), R.col(0)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 1, 0), R.col(0)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 1, 0), R.col(0)));
+            minOverlap = overlap;
+        }
     }
 
     // case 5 Test axis L = A1 x B1
     r1 = hdims1.x * Rabs[6] + hdims1.z * Rabs[4];
     r2 = hdims2.x * Rabs[9] + hdims2.z * Rabs[1];
     overlap = r1 + r2 - (Abs(pos[0] * R[6] - pos[2] * R[4]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 1, 0), R.col(1)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 1, 0), R.col(1)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 1, 0), R.col(1)));
+            minOverlap = overlap;
+        }
     }
 
     // case 6 Test axis L = A1 x B2
-
     r1 = hdims1.x * Rabs[10] + hdims1.z * Rabs[8];
     r2 = hdims2.x * Rabs[5] + hdims2.y * Rabs[1];
     overlap = r1 + r2 - (Abs(pos[0] * R[10] - pos[2] * R[8]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 1, 0), R.col(2)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 1, 0), R.col(2)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 1, 0), R.col(2)));
+            minOverlap = overlap;
+        }
     }
 
     // case 7 Test axis L = A2 x B0
-
     r1 = hdims1.x * Rabs[1] + hdims1.y * Rabs[0];
     r2 = hdims2.y * Rabs[10] + hdims2.z * Rabs[6];
     overlap = r1 + r2 - (Abs(pos[1] * R[0] - pos[0] * R[1]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 0, 1), R.col(0)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 0, 1), R.col(0)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 0, 1), R.col(0)));
+            minOverlap = overlap;
+        }
     }
 
     // case 8 Test axis L = A2 x B1
-
     r1 = hdims1.x * Rabs[5] + hdims1.y * Rabs[4];
     r2 = hdims2.x * Rabs[10] + hdims2.z * Rabs[2];
     overlap = r1 + r2 - (Abs(pos[1] * R[4] - pos[0] * R[5]));
-    if (overlap < -gap_threshold) {
-        return false;
-    }
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 0, 1), R.col(1)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 0, 1), R.col(1)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold) {
+            return false;
+        }
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 0, 1), R.col(1)));
+            minOverlap = overlap;
+        }
     }
 
     // case 9 Test axis L = A2 x B2
-
     r1 = hdims1.x * Rabs[9] + hdims1.y * Rabs[8];
     r2 = hdims2.x * Rabs[6] + hdims2.y * Rabs[2];
     overlap = r1 + r2 - (Abs(pos[1] * R[8] - pos[0] * R[9]));
-    if (overlap < -gap_threshold)
-        return false;
-    if (overlap < minOverlap && overlap > gap_threshold) {
-        dir = Normalize(Cross(real3(0, 0, 1), R.col(2)));
-        minOverlap = overlap;
+    axisLen = Length(Cross(real3(0, 0, 1), R.col(2)));
+    if (axisLen > 0.1) {
+        overlap = overlap * axisLen;
+        if (overlap < -gap_threshold)
+            return false;
+        if (overlap < minOverlap && overlap > gap_threshold) {
+            dir = Normalize(Cross(real3(0, 0, 1), R.col(2)));
+            minOverlap = overlap;
+        }
     }
 
     ret_overlap = minOverlap;
