@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
     float object_restitution = 0.0f;
     float object_young_modulus = 1e7f;
     float object_poisson_ratio = 0.3f;
-    float object_adhesion = 0.0f;
+    ////float object_adhesion = 0.0f;
     float object_kn = 2e3;
     float object_gn = 40;
     float object_kt = 2e5;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     float ground_restitution = 0.0f;
     float ground_young_modulus = 1e7f;
     float ground_poisson_ratio = 0.3f;
-    float ground_adhesion = 0.0f;
+    ////float ground_adhesion = 0.0f;
     float ground_kn = 2e3;
     float ground_gn = 40;
     float ground_kt = 2e5;
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
     std::cout << "-----------------------" << std::endl;
 
     // Create the system
-    ChSystem* system;
+    ChSystem* system = nullptr;
 
     switch (contact_method) {
         case ChContactMethod::NSC:
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     application.SetSymbolscale(5e-4);
     application.SetContactsDrawMode(IrrContactsDrawMode::CONTACT_FORCES);
     ////application.SetSymbolscale(1);
-    ////application.SetContactsDrawMode(ChIrrTools::eCh_ContactsDrawMode::CONTACT_NORMALS);
+    ////application.SetContactsDrawMode(IrrContactsDrawMode::CONTACT_NORMALS);
 
     // Rotation Z->Y (because meshes used here assume Z up)
     ChQuaternion<> z2y = Q_from_AngX(-CH_C_PI_2);
