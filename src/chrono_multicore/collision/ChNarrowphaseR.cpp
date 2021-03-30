@@ -219,6 +219,21 @@ bool RCollision(const ConvexBase* shapeA,  // first candidate shape
     if (shapeA->Type() == ChCollisionShape::Type::BOX && shapeB->Type() == ChCollisionShape::Type::BOX) {
         nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), ct_norm,
                      ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
+        std::cout << "-------------------" << std::endl;
+        std::cout << nC << std::endl;
+        for (int j = 0; j < nC; j++) {
+            real3 ptT = *(ct_pt1 + j);
+            real3 ptO = *(ct_pt2 + j);
+            real3 nrm = *(ct_norm + j);
+            real depth = *(ct_depth + j);
+            real er = *(ct_eff_rad + j);
+            std::cout << "  " << ptT.x << "  " << ptT.y << "  " << ptT.z << std::endl;
+            std::cout << "  " << ptO.x << "  " << ptO.y << "  " << ptO.z << std::endl;
+            std::cout << "  " << nrm.x << "  " << nrm.y << "  " << nrm.z << std::endl;
+            std::cout << "  " << depth << std::endl;
+            std::cout << "  " << er << std::endl;
+        }
+
         return true;
     }
 
@@ -1233,7 +1248,7 @@ int box_box(const real3& posT,
 
         return j;
     } else if (numAxesT == 1) {
-        std::cout << "1" << std::endl;
+        //std::cout << "1" << std::endl;
         int j = 0;
         // face to edge
         get_face_corners(cornerT, codeT, cornersT);
@@ -1242,7 +1257,7 @@ int box_box(const real3& posT,
         for (uint i = 0; i < 2; i++) {
             // std::cout << cornersO[i].x << "," << cornersO[i].y << "," << cornersO[i].z << std::endl;
             real3 print = Rotate(cornersO[i], rot) + pos;
-            std::cout << print.x << "," << print.y << "," << print.z << std::endl;
+            //std::cout << print.x << "," << print.y << "," << print.z << std::endl;
             if (point_contact_face(cornerT, codeT, Rotate(cornersO[i], rot) + pos, locT, distance, hdimsT)) {
                 real3 tempT = Rotate(locT, rotT) + posT;
                 real3 tempO = Rotate(cornersO[i], rotO) + posO;
