@@ -449,7 +449,7 @@ bool box_intersects_box(const real3& hdims1,
     // x-axis
     r2 = Dot(Rabs.row(0), hdims2);
     overlap = hdims1.x + r2 - Abs(pos.x);
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -459,7 +459,7 @@ bool box_intersects_box(const real3& hdims1,
     // y-axis
     r2 = Dot(Rabs.row(1), hdims2);
     overlap = hdims1.y + r2 - Abs(pos.y);
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -469,7 +469,7 @@ bool box_intersects_box(const real3& hdims1,
     // z-axis
     r2 = Dot(Rabs.row(2), hdims2);
     overlap = hdims1.z + r2 - Abs(pos.z);
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -481,7 +481,7 @@ bool box_intersects_box(const real3& hdims1,
     // x-axis
     r1 = Dot(Rabs.col(0), hdims1);
     overlap = r1 + hdims2.x - Abs(Dot(R.col(0), pos));
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -491,7 +491,7 @@ bool box_intersects_box(const real3& hdims1,
     // y-axis
     r1 = Dot(Rabs.col(1), hdims1);
     overlap = r1 + hdims2.y - Abs(Dot(R.col(1), pos));
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -501,7 +501,7 @@ bool box_intersects_box(const real3& hdims1,
     // z-axis
     r1 = Dot(Rabs.col(2), hdims1);
     overlap = r1 + hdims2.z - Abs(Dot(R.col(2), pos));
-    if (overlap < -gap_threshold) {
+    if (overlap < gap_threshold) {
         return false;
     }
     if (overlap < minOverlap && overlap > gap_threshold) {
@@ -522,7 +522,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(1, 0, 0), R.col(0)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -538,7 +538,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(1, 0, 0), R.col(1)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -554,7 +554,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(1, 0, 0), R.col(2)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -570,7 +570,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 1, 0), R.col(0)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -586,7 +586,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 1, 0), R.col(1)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -602,7 +602,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 1, 0), R.col(2)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -618,7 +618,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 0, 1), R.col(0)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -634,7 +634,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 0, 1), R.col(1)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold) {
+        if (overlap < gap_threshold) {
             return false;
         }
         if (overlap < minOverlap && overlap > gap_threshold) {
@@ -650,7 +650,7 @@ bool box_intersects_box(const real3& hdims1,
     axisLen = Length(Cross(real3(0, 0, 1), R.col(2)));
     if (axisLen > 0.1) {
         overlap = overlap * axisLen;
-        if (overlap < -gap_threshold)
+        if (overlap < gap_threshold)
             return false;
         if (overlap < minOverlap && overlap > gap_threshold) {
             dir = Normalize(Cross(real3(0, 0, 1), R.col(2)));

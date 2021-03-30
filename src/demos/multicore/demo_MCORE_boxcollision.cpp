@@ -84,18 +84,18 @@ void AddContainer(ChSystemMulticoreSMC* sys) {
 void AddCollisionBox(ChSystemMulticore* sys) {
     // Common material
     auto boxMat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
-    boxMat->SetYoungModulus(Y);
+    boxMat->SetYoungModulus(2e5);
     boxMat->SetFriction(mu);
     boxMat->SetRestitution(cr);
     boxMat->SetAdhesion(0);  // Magnitude of the adhesion in Constant adhesion model
 
     int boxId = 0;
-    double mass = 10;
-    ChVector<> size = ChVector<>(0.15, 0.1, 0.1);
+    double mass = 1000;
+    ChVector<> size = ChVector<>(0.5, 0.5, 0.35);
     ChVector<> inertia = 1;
 
     for (int i = 0; i < 1; i++) {
-        ChVector<> pos(0.0 + 0.4 * i, 1.6 + 0.4 * i, 0.3 + 0.3 * i);
+        ChVector<> pos(0.0 + 0.4 * i, 1.0 + 0.4 * i, 0.5 + 0.3 * i);
         ChQuaternion<> rot = Q_from_Euler123(ChVector<>(0, 0, 0));
 
         auto box = chrono_types::make_shared<ChBody>(chrono_types::make_shared<ChCollisionModelMulticore>());
