@@ -36,7 +36,7 @@ int count_Y = 2;
 // Material properties (same on bin and balls)
 float Y = 2e6f;
 float mu = 0.4f;
-float cr = 0.4f;
+float cr = 0.0f;
 
 // -----------------------------------------------------------------------------
 // Create a bin consisting of five boxes attached to the ground.
@@ -84,7 +84,7 @@ void AddContainer(ChSystemMulticoreSMC* sys) {
 void AddCollisionBox(ChSystemMulticore* sys) {
     // Common material
     auto boxMat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
-    boxMat->SetYoungModulus(2e5);
+    boxMat->SetYoungModulus(Y);
     boxMat->SetFriction(mu);
     boxMat->SetRestitution(cr);
     boxMat->SetAdhesion(0);  // Magnitude of the adhesion in Constant adhesion model

@@ -219,20 +219,20 @@ bool RCollision(const ConvexBase* shapeA,  // first candidate shape
     if (shapeA->Type() == ChCollisionShape::Type::BOX && shapeB->Type() == ChCollisionShape::Type::BOX) {
         nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), ct_norm,
                      ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
-        std::cout << "-------------------" << std::endl;
-        std::cout << nC << std::endl;
-        for (int j = 0; j < nC; j++) {
-            real3 ptT = *(ct_pt1 + j);
-            real3 ptO = *(ct_pt2 + j);
-            real3 nrm = *(ct_norm + j);
-            real depth = *(ct_depth + j);
-            real er = *(ct_eff_rad + j);
-            std::cout << "  " << ptT.x << "  " << ptT.y << "  " << ptT.z << std::endl;
-            std::cout << "  " << ptO.x << "  " << ptO.y << "  " << ptO.z << std::endl;
-            std::cout << "  " << nrm.x << "  " << nrm.y << "  " << nrm.z << std::endl;
-            std::cout << "  " << depth << std::endl;
-            std::cout << "  " << er << std::endl;
-        }
+
+        ////std::cout << nC << std::endl;
+        ////for (int j = 0; j < nC; j++) {
+        ////    real3 ptT = *(ct_pt1 + j);
+        ////    real3 ptO = *(ct_pt2 + j);
+        ////    real3 nrm = *(ct_norm + j);
+        ////    real depth = *(ct_depth + j);
+        ////    real er = *(ct_eff_rad + j);
+        ////    std::cout << "  " << ptT.x << "  " << ptT.y << "  " << ptT.z << std::endl;
+        ////    std::cout << "  " << ptO.x << "  " << ptO.y << "  " << ptO.z << std::endl;
+        ////    std::cout << "  " << nrm.x << "  " << nrm.y << "  " << nrm.z << std::endl;
+        ////    std::cout << "  " << depth << std::endl;
+        ////    std::cout << "  " << er << std::endl;
+        ////}
 
         return true;
     }
