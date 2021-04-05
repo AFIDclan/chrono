@@ -47,9 +47,10 @@ void CreateSliderGuide(std::shared_ptr<ChBody>& mguide,
     mguide->SetBodyFixed(true);
     msystem.Add(mguide);
 
-    mslider =
-        chrono_types::make_shared<ChBodyEasyBox>(0.4, 0.2, 0.5, 1000, true, true, material,
-                                                 chrono_types::make_shared<collision::ChCollisionModelMulticore>());
+    ////mslider = chrono_types::make_shared<ChBodyEasyBox>(
+    ////    0.4, 0.2, 0.5, 1000, true, true, material, chrono_types::make_shared<collision::ChCollisionModelMulticore>());
+    mslider = chrono_types::make_shared<ChBodyEasySphere>(
+        0.14, 1000, true, true, material, chrono_types::make_shared<collision::ChCollisionModelMulticore>());
     mslider->SetPos(mpos + ChVector<>(0, 0.3, 0));
     msystem.Add(mslider);
 
@@ -510,15 +511,38 @@ void ExampleB4(ChSystem& mphysicalSystem, std::shared_ptr<ChMaterialSurface> mat
 // -----------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
+    chrono::ChContactMethod method = chrono::ChContactMethod::NSC;
     double step_size = 1e-3;
+    ChSystemMulticore* sys = nullptr;
+    std::shared_ptr<ChMaterialSurface> material;
 
-    ChSystemMulticoreNSC mphysicalSystem;
-    mphysicalSystem.Set_G_acc(ChVector<double>(0, -9.8, 0));
-    mphysicalSystem.GetSettings()->solver.tolerance = 1e-5;
-    mphysicalSystem.ChangeSolverType(SolverType::BB);
+    switch (method) {
+        case chrono::ChContactMethod::NSC: {
+            auto sysNSC = new ChSystemMulticoreNSC;
+            sysNSC->ChangeSolverType(SolverType::BB);
+            sys = sysNSC;
+            auto materialNSC = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+            material = materialNSC;
+            step_size = 1e-3;
+            break;
+        }
+        case chrono::ChContactMethod::SMC: {
+            auto sysSMC = new ChSystemMulticoreSMC;
+            sysSMC->GetSettings()->solver.contact_force_model = ChSystemSMC::ContactForceModel::Hertz;
+            sysSMC->GetSettings()->solver.tangential_displ_mode = ChSystemSMC::TangentialDisplacementModel::OneStep;
+            sys = sysSMC;
+            auto materialSMC = chrono_types::make_shared<ChMaterialSurfaceSMC>();
+            materialSMC->SetYoungModulus(1e7f);
+            materialSMC->SetRestitution(0.1f);
+            material = materialSMC;
+            step_size = 1e-4;
+            break;
+        }
+    }
 
-    // Contact material shared among all objects
-    auto material = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    sys->Set_G_acc(ChVector<double>(0, -9.8, 0));
+    sys->GetSettings()->solver.tolerance = 1e-5;
+    sys->GetSettings()->collision.bins_per_axis = vec3(1, 1, 1);
 
     // Create ground body
     auto floorBody =
@@ -526,23 +550,23 @@ int main(int argc, char* argv[]) {
                                                  chrono_types::make_shared<collision::ChCollisionModelMulticore>());
     floorBody->SetPos(ChVector<>(0, -2, 0));
     floorBody->SetBodyFixed(true);
-    mphysicalSystem.Add(floorBody);
+    sys->Add(floorBody);
 
     // Add examples of rotational motors
-    ExampleA1(mphysicalSystem, material);
-    ExampleA2(mphysicalSystem, material);
-    ExampleA3(mphysicalSystem, material);
-    ExampleA4(mphysicalSystem, material);
+    ExampleA1(*sys, material);
+    ExampleA2(*sys, material);
+    ExampleA3(*sys, material);
+    ExampleA4(*sys, material);
 
     // Add examples of linear motors
-    ExampleB1(mphysicalSystem, material);
-    ExampleB2(mphysicalSystem, material);
-    ExampleB3(mphysicalSystem, material);
-    ExampleB4(mphysicalSystem, material);
+    ExampleB1(*sys, material);
+    ExampleB2(*sys, material);
+    ExampleB3(*sys, material);
+    ExampleB4(*sys, material);
 
     // Create OpenGL visualization
     opengl::ChOpenGLWindow& gl_window = opengl::ChOpenGLWindow::getInstance();
-    gl_window.Initialize(1280, 720, "Rotational motor", &mphysicalSystem);
+    gl_window.Initialize(1280, 720, "Rotational motor", sys);
     gl_window.SetCamera(ChVector<>(1, 3, -7), ChVector<>(0, 0, 0), ChVector<>(0, 1, 0), 0.5f);
     gl_window.SetRenderMode(opengl::WIREFRAME);
 
@@ -550,7 +574,7 @@ int main(int argc, char* argv[]) {
     // Simulate system
     //
     while (gl_window.Active()) {
-        mphysicalSystem.DoStepDynamics(step_size);
+        sys->DoStepDynamics(step_size);
         gl_window.Render();
     }
 
