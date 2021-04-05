@@ -514,7 +514,7 @@ bool box_sphere(const real3& pos1,
     pt1 = TransformLocalToParent(pos1, rot1, boxPos);
     pt2 = pos2 - norm * radius2;
 
-    if ((code != 1) & (code != 2) & (code != 4))
+    if ((code != 1) && (code != 2) && (code != 4))
         eff_radius = radius2 * edge_radius / (radius2 + edge_radius);
     else
         eff_radius = radius2;
@@ -572,7 +572,7 @@ bool roundedbox_sphere(const real3& pos1,
     pt2 = pos2 - norm * radius2;
     pt1 = pt2 - depth * norm;
 
-    if ((code != 1) & (code != 2) & (code != 4))
+    if ((code != 1) && (code != 2) && (code != 4))
         eff_radius = radius2 * srad1 / (radius2 + srad1);
     else
         eff_radius = radius2;
@@ -905,7 +905,7 @@ int box_capsule(const real3& pos1,
         *(pt1 + j) = TransformLocalToParent(pos1, rot1, boxPos);
         *(pt2 + j) = TransformLocalToParent(pos1, rot1, spherePos) - (*(norm + j)) * radius2;
 
-        if ((code != 1) & (code != 2) & (code != 4))
+        if ((code != 1) && (code != 2) && (code != 4))
             *(eff_radius + j) = radius2 * edge_radius / (radius2 + edge_radius);
         else
             *(eff_radius + j) = radius2;
