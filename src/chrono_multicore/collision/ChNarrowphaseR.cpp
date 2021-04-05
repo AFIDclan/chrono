@@ -809,8 +809,8 @@ int box_capsule(const real3& pos1,
     // this by clamping the capsule axis to the volume between two parallel
     // faces of the box, considering in turn the x, y, and z faces.
     real3 hdims1_exp = hdims1 + radius2_s;
-    real tMin = -FLT_MAX;  //// TODO: should define a REAL_MAX to be used here
-    real tMax = FLT_MAX;
+    real tMin = -C_LARGE_REAL;
+    real tMax = C_LARGE_REAL;
 
     if (Abs(V.x) < 1e-5) {
         // Capsule axis parallel to the box x-faces
@@ -951,8 +951,8 @@ int box_cylshell(const real3& pos1,
     // intersects the expanded box. We do this by clamping the capsule axis to the volume between two parallel faces
     // of the box, considering in turn the x, y, and z faces.
     real3 hdims_exp = hdims + radius_s;
-    real tMin = -FLT_MAX;  //// TODO: should define a REAL_MAX to be used here
-    real tMax = FLT_MAX;
+    real tMin = -C_LARGE_REAL;
+    real tMax = C_LARGE_REAL;
 
     real threshold = real(1e-5);  // threshold for line parallel to face tests
 
@@ -1048,7 +1048,7 @@ int box_cylshell(const real3& pos1,
             continue;
 
         // Moving in the u direction, project cylinder point onto box surface.
-        real step = FLT_MAX;
+        real step = C_LARGE_REAL;
         if (Abs(u.x) > threshold)
             step = Min((Sign(u.x) * hdims.x - cylPoint.x) / u.x, step);
         if (Abs(u.y) > threshold)
