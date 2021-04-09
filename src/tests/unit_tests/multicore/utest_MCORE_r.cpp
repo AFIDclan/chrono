@@ -136,17 +136,17 @@ TEST(ChNarrowphaseR, snap_to_face_box) {
 TEST(ChNarrowphaseR, get_face_corners) {
     {
         {
-            // dir z / inside
+            // dir x / inside
             real3 pt_on_box(1.0, 2.0, 3.0);
             real3 hdims(1.0, 2.0, 3.0);
-            uint code = 1 << 2;
+            uint code = 1 << 0;
             real3 corners[4];
 
             get_face_corners(pt_on_box, code, corners);
-            Assert_near(corners[0], real3(1, 2, 3), precision);
-            Assert_near(corners[1], real3(-1, 2, 3), precision);
-            Assert_near(corners[2], real3(-1, -2, 3), precision);
-            Assert_near(corners[3], real3(1, -2, 3), precision);
+            Assert_near(corners[0], real3(1.0, 2.0, 3.0), precision);
+            Assert_near(corners[1], real3(1.0, -2.0, 3.0), precision);
+            Assert_near(corners[2], real3(1.0, -2.0, -3.0), precision);
+            Assert_near(corners[3], real3(1.0, 2.0, -3.0), precision);
         }
 
         {
@@ -161,6 +161,20 @@ TEST(ChNarrowphaseR, get_face_corners) {
             Assert_near(corners[1], real3(1.0, 2.0, -3.0), precision);
             Assert_near(corners[2], real3(-1.0, 2.0, -3.0), precision);
             Assert_near(corners[3], real3(-1.0, 2.0, 3.0), precision);
+        }
+
+        {
+            // dir z / inside
+            real3 pt_on_box(1.0, 2.0, 3.0);
+            real3 hdims(1.0, 2.0, 3.0);
+            uint code = 1 << 2;
+            real3 corners[4];
+
+            get_face_corners(pt_on_box, code, corners);
+            Assert_near(corners[0], real3(1, 2, 3), precision);
+            Assert_near(corners[1], real3(-1, 2, 3), precision);
+            Assert_near(corners[2], real3(-1, -2, 3), precision);
+            Assert_near(corners[3], real3(1, -2, 3), precision);
         }
     }
 }
@@ -208,16 +222,16 @@ TEST(ChNarrowphaseR, get_edge_corners) {
 TEST(ChNarrowphaseR, point_contact_face) {
     {
         {
-            // dir z | valid contact
-            real3 pt_on_face(1, 2, 3);
+            // dir x | valid contact
+            real3 pt_on_face(-1, 2, 3);
             real3 hdims(1, 2, 3);
-            real3 pt_to_snap(0.4, 0.8, 2.5);
-            uint code = 4;
+            real3 pt_to_snap(-0.9, 1.4, 2);
+            uint code = 1;
             real3 result;
             real dist;
 
             ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
-            Assert_near(result, real3(0.4, 0.8, 3), precision);
+            Assert_near(result, real3(-1, 1.4, 2), precision);
         }
 
         {
@@ -234,16 +248,40 @@ TEST(ChNarrowphaseR, point_contact_face) {
         }
 
         {
-            // dir x | valid contact
-            real3 pt_on_face(-1, 2, 3);
+            // dir z | valid contact
+            real3 pt_on_face(1, 2, 3);
             real3 hdims(1, 2, 3);
-            real3 pt_to_snap(-0.9, 1.4, 2);
-            uint code = 1;
+            real3 pt_to_snap(0.4, 0.8, 2.5);
+            uint code = 4;
             real3 result;
             real dist;
 
             ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
-            Assert_near(result, real3(-1, 1.4, 2), precision);
+            Assert_near(result, real3(0.4, 0.8, 3), precision);
+        }
+
+        {
+            // dir x | valid contact
+            real3 pt_on_face(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(1.1, 1.4, 2);
+            uint code = 1;
+            real3 result;
+            real dist;
+
+            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+        }
+
+        {
+            // dir y | valid contact
+            real3 pt_on_face(1, 2, 3);
+            real3 hdims(1, 2, 3);
+            real3 pt_to_snap(0.5, 2.4, 2);
+            uint code = 2;
+            real3 result;
+            real dist;
+
+            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
         }
 
         {
@@ -496,7 +534,7 @@ TEST_P(Collision, box_box) {
         quaternion rot1(1, 0, 0, 0);
 
         real3 hdims2(0.5, 0.5, 0.1);
-        real3 pos2(0, 0, +0.1-penetration);
+        real3 pos2(0, 0, +0.1 - penetration);
         quaternion rot2(1, 0, 0, 0);
 
         ConvexShapeCustom* shape1 = new ConvexShapeCustom();

@@ -1123,7 +1123,7 @@ int box_box(const real3& posT,
     uint codeO = box_closest_feature(dirO, hdimsO);
     uint numAxesT = (codeT & 1) + ((codeT >> 1) & 1) + ((codeT >> 2) & 1);
     uint numAxesO = (codeO & 1) + ((codeO >> 1) & 1) + ((codeO >> 2) & 1);
-    // Temp var
+
     real3 cornersT[4];
     real3 cornersO[4];
     real3 locT;
@@ -1132,18 +1132,19 @@ int box_box(const real3& posT,
 
     // Generate contact
     if (numAxesT == 3 || numAxesO == 3) {
-        // T corner to X, or X to O corner
         if (numAxesT == 3) {
-            // T corner to X
             if (numAxesO == 2) {
-                // T corner to O edge
+                // cornerT to edgeO
                 cornerO = snap_to_edge(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
             } else if (numAxesO == 1) {
+                // cornerT to faceO
                 cornerO = snap_to_face_box(cornerO, codeO, Rotate(cornerT - pos, Inv(rot)), hdimsO);
             }
         } else if (numAxesT == 2) {
+            // cornerO to edgeT
             cornerT = snap_to_edge(cornerT, codeT, Rotate(cornerO, rot) + pos, hdimsT);
         } else {
+            // cornerO to faceT
             cornerT = snap_to_face_box(cornerT, codeT, Rotate(cornerO, rot) + pos, hdimsT);
         }
 
@@ -1156,11 +1157,12 @@ int box_box(const real3& posT,
         *(eff_radius) = edge_radius / 2;
         return 1;
     } else if (numAxesT == 2 && numAxesO == 2) {
-        // edge to edge
+        // edgeT to edgeO
         get_edge_corners(cornerO, codeO, cornersO);
         real3 corner0 = Rotate(cornersO[0], rot) + pos;
         real3 corner1 = Rotate(cornersO[1], rot) + pos;
 
+        // determine whether the contact point between edgeT to edgeO
         if (edge_contact_edge(cornerT, codeT, corner0, corner1, locT, locO, hdimsT)) {
             *(ptT) = Rotate(locT, rotT) + posT;
             *(ptO) = Rotate(locO, rotT) + posT;
@@ -1173,9 +1175,10 @@ int box_box(const real3& posT,
         }
     } else if (numAxesT == 1 && numAxesO == 1) {
         int j = 0;
-        // face to face
+
         get_face_corners(cornerT, codeT, cornersT);
         get_face_corners(cornerO, codeO, cornersO);
+        // check four corners of boxO against face of boxT
         for (uint i = 0; i < 4; i++) {
             if (point_contact_face(cornerT, codeT, Rotate(cornersO[i], rot) + pos, locT, distance, hdimsT)) {
                 locT = Rotate(locT, rotT) + posT;
@@ -1193,7 +1196,7 @@ int box_box(const real3& posT,
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
-
+            // check four corners of boxT against face of boxO
             if (point_contact_face(cornerO, codeO, Rotate(cornersT[i] - pos, Inv(rot)), locO, distance, hdimsO)) {
                 locT = Rotate(cornersT[i], rotT) + posT;
                 locO = Rotate(locO, rotO) + posO;
@@ -1243,7 +1246,7 @@ int box_box(const real3& posT,
         return j;
     } else if (numAxesT == 1) {
         int j = 0;
-        // face to edge
+        // faceT to edgeO
         get_face_corners(cornerT, codeT, cornersT);
         get_edge_corners(cornerO, codeO, cornersO);
         dir = Rotate(dir, rotT);
@@ -1292,7 +1295,7 @@ int box_box(const real3& posT,
         int j = 0;
         get_edge_corners(cornerT, codeT, cornersT);
         get_face_corners(cornerO, codeO, cornersO);
-
+        // edgeT to faceO
         for (uint i = 0; i < 2; i++) {
             if (point_contact_face(cornerO, codeO, Rotate(cornersT[i] - pos, Inv(rot)), locO, distance, hdimsO)) {
                 real3 tempT = Rotate(cornersT[i], rotT) + posT;
@@ -1342,9 +1345,6 @@ int box_box(const real3& posT,
         return j;
     }
 
-    // 1 / eff_radius = 1 / R1 + 1 / R2
-    // edge to edge / edge to corner / corner to edge val/2
-    // face to edge / face to corner / edge to face / corner to face val
     return 0;
 }
 
