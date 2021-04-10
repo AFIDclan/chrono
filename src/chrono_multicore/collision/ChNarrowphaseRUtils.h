@@ -30,10 +30,14 @@ namespace collision {
 /// @addtogroup multicore_collision
 /// @{
 
+// -----------------------------------------------------------------------------
+// Utilities for triangle collisions
+// -----------------------------------------------------------------------------
+
 /// This utility function returns the normal to the triangular face defined by
 /// the vertices A, B, and C. The face is assumed to be non-degenerate.
 /// Note that order of vertices is important!
-real3 face_normal(const real3& A, const real3& B, const real3& C) {
+real3 triangle_normal(const real3& A, const real3& B, const real3& C) {
     real3 v1 = B - A;
     real3 v2 = C - A;
     real3 n = Cross(v1, v2);
@@ -49,7 +53,7 @@ real3 face_normal(const real3& A, const real3& B, const real3& C) {
 /// result is on an edge of this face and 'false' if the result is inside the
 /// triangle.
 /// Code from Ericson, "Real-time collision detection", 2005, pp. 141
-bool snap_to_face(const real3& A, const real3& B, const real3& C, const real3& P, real3& res) {
+bool snap_to_triangle(const real3& A, const real3& B, const real3& C, const real3& P, real3& res) {
     real3 AB = B - A;
     real3 AC = C - A;
 
@@ -116,6 +120,10 @@ bool snap_to_face(const real3& A, const real3& B, const real3& C, const real3& P
     return false;
 }
 
+// -----------------------------------------------------------------------------
+// Utilities for cylinder collisions
+// -----------------------------------------------------------------------------
+
 /// This utility function snaps the specified location to a point on a cylinder
 /// with given radius and half-length. The in/out location is assumed to be
 /// specified in the frame of the cylinder (in this frame the cylinder is assumed
@@ -146,6 +154,28 @@ uint snap_to_cylinder(const real& rad, const real& hlen, real3& loc) {
     }
 
     return code;
+}
+
+// -----------------------------------------------------------------------------
+// Utilities for box collisions
+// -----------------------------------------------------------------------------
+
+/// This utility function returns a code that indicates the closest feature of
+/// a box in the specified direction. The direction 'dir' is assumed to be
+/// given in the frame of the box. The return code encodes the box axes that
+/// define the closest feature:
+///   - first bit (least significant) corresponds to x-axis
+///   - second bit corresponds to y-axis
+///   - third bit corresponds to z-axis
+///
+/// Therefore:
+///   code = 0 indicates a degenerate direction (within a threshold)
+///   code = 1 or code = 2 or code = 4  indicates a face
+///   code = 3 or code = 5 or code = 6  indicates an edge
+///   code = 7 indicates a corner
+uint box_closest_feature(const real3& dir, const real3& hdims) {
+    real threshold = 0.02;
+    return ((Abs(dir.x) > threshold) << 0) | ((Abs(dir.y) > threshold) << 1) | ((Abs(dir.z) > threshold) << 2);
 }
 
 /// This utility function snaps the specified location to a point on a box with
@@ -182,7 +212,8 @@ uint snap_to_box(const real3& hdims, real3& loc) {
 
 /// This utility function snaps the location 'pt_to_snap' to a location on the face of this box identified by the
 /// specified 'code' and 'pt_on_box'. The resulting location is returned.
-real3 snap_to_face_box(const real3& pt_on_box, uint code, const real3& pt_to_snap, const real3& hdims) {
+/// See box_closest_feature for definition on 'code.
+real3 snap_to_box_face(const real3& hdims, const real3& pt_on_box, uint code, const real3& pt_to_snap) {
     uint side = code >> 1;
     real3 A;
     real3 B;
@@ -208,7 +239,8 @@ real3 snap_to_face_box(const real3& pt_on_box, uint code, const real3& pt_to_sna
 
 /// This utility function snaps the location 'pt_to_snap' to a location on the edge of this box identified by the
 /// specified 'code' and 'pt_on_box'. The resulting location is returned.
-real3 snap_to_edge(const real3& pt_on_box, uint code, const real3& pt_to_snap, const real3& hdims) {
+/// See box_closest_feature for definition on 'code.
+real3 snap_to_box_edge(const real3& hdims, const real3& pt_on_box, uint code, const real3& pt_to_snap) {
     uint axis = (~code & 7) >> 1;
 
     real3 pt1 = pt_on_box;
@@ -231,7 +263,8 @@ real3 snap_to_edge(const real3& pt_on_box, uint code, const real3& pt_to_snap, c
     return pt1 + t * edge;
 }
 
-/// This utility function fill out 'corners' with the corners of the edge specified by 'code' and 'pt_on_edge'.
+/// This utility function fill out 'corners' with the corners of the box edge specified by 'code' and 'pt_on_edge'.
+/// See box_closest_feature for definition on 'code.
 void get_edge_corners(const real3& pt_on_edge, uint code, real3* corners) {
     code = ((~code & 7) >> 1);
 
@@ -248,6 +281,7 @@ void get_edge_corners(const real3& pt_on_edge, uint code, real3* corners) {
 }
 
 /// This utility function fill out 'corners' with the corners of the face specified by 'code' and 'pt_on_face'.
+/// See box_closest_feature for definition on 'code.
 void get_face_corners(const real3& pt_on_face, uint code, real3* corners) {
     code = code >> 1;
 
@@ -278,45 +312,47 @@ void get_face_corners(const real3& pt_on_face, uint code, real3* corners) {
 /// This utility function returns a boolean indicating whether or not the location 'pt_to_snap' penetrates the face of
 /// this box identified by 'pt_on_face' and 'code'. If so, the point of contact on the face is returned in 'result' and
 /// the depth of penetration is returned in 'dist'.
-bool point_contact_face(const real3& pt_on_face,
+/// See box_closest_feature for definition on 'code.
+bool point_contact_face(const real3& hdims,
+                        const real3& pt_on_face,
                         uint code,
-                        const real3& pt_to_snap,
+                        const real3& point,
                         real3& result,
-                        real& dist,
-                        const real3& hdims) {
+                        real& dist) {
     code = code >> 1;
-    if (abs(pt_to_snap.x) > hdims.x)
+    if (abs(point.x) > hdims.x)
         return false;
-    if (abs(pt_to_snap.y) > hdims.y)
+    if (abs(point.y) > hdims.y)
         return false;
-    if (abs(pt_to_snap.z) > hdims.z)
+    if (abs(point.z) > hdims.z)
         return false;
 
-    result = pt_to_snap;
+    result = point;
     if (code == 0) {
         result.x = pt_on_face.x;
-        dist = abs(pt_to_snap.x - pt_on_face.x);
+        dist = abs(point.x - pt_on_face.x);
     } else if (code == 1) {
         result.y = pt_on_face.y;
-        dist = abs(pt_to_snap.y - pt_on_face.y);
+        dist = abs(point.y - pt_on_face.y);
     } else {
         result.z = pt_on_face.z;
-        dist = abs(pt_to_snap.z - pt_on_face.z);
+        dist = abs(point.z - pt_on_face.z);
     }
     return dist > 1e-6;
 }
 
-/// This utility function returns a boolean indicating whether or not the edge between 'pt1' and 'pt2' penetrates the
+/// This utility function returns a boolean indicating whether or not the segment between 'pt1' and 'pt2' penetrates the
 /// edge of this box identified by 'pt_on_edge' and 'code'. If so, the points of contact are returned in 'loc1' and
 /// 'loc2'. This function uses the parametric solution of these lines to solve for the closest point. These are greatly
-/// simplified because we work in the local frame of one of the edges.
-bool edge_contact_edge(const real3& pt_on_edge,
-                       uint code,
-                       const real3& pt1,
-                       const real3& pt2,
-                       real3& loc1,
-                       real3& loc2,
-                       const real3& hdims) {
+/// simplified because we work in the local frame of the box.
+/// See box_closest_feature for definition on 'code.
+bool segment_contact_edge(const real3& hdims,
+                          const real3& pt_on_edge,
+                          uint code,
+                          const real3& pt1,
+                          const real3& pt2,
+                          real3& loc1,
+                          real3& loc2) {
     // Calculate the denominator of the solution. If it is zero, the edges are
     // parallel and there is no contact.
     code = (~code & 7) >> 1;
@@ -379,36 +415,22 @@ bool edge_contact_edge(const real3& pt_on_edge,
 
 /// This utility function returns the corner of a box of given dimensions that
 /// if farthest in the direction 'dir', which is assumed to be given in the frame of the box.
-void box_farthest_corner(const real3& hdims, const real3& dir, real3& corner) {
+real3 box_farthest_corner(const real3& hdims, const real3& dir) {
+    real3 corner;
     corner.x = (dir.x < 0) ? hdims.x : -hdims.x;
     corner.y = (dir.y < 0) ? hdims.y : -hdims.y;
     corner.z = (dir.z < 0) ? hdims.z : -hdims.z;
+    return corner;
 }
 
 /// This utility function returns the corner of a box of given dimensions that
 /// if closest in the direction 'dir', which is assumed to be given in the frame of the box.
-void box_closest_corner(const real3& hdims, const real3& dir, real3& corner) {
+real3 box_closest_corner(const real3& hdims, const real3& dir) {
+    real3 corner;
     corner.x = (dir.x > 0) ? hdims.x : -hdims.x;
     corner.y = (dir.y > 0) ? hdims.y : -hdims.y;
     corner.z = (dir.z > 0) ? hdims.z : -hdims.z;
-}
-
-/// This utility function returns a code that indicates the closest feature of
-/// a box in the specified direction. The direction 'dir' is assumed to be
-/// given in the frame of the box. The return code encodes the box axes that
-/// define the closest feature:
-///   - first bit (least significant) corresponds to x-axis
-///   - second bit corresponds to y-axis
-///   - third bit corresponds to z-axis
-///
-/// Therefore:
-///   code = 0 indicates a degenerate direction (within a threshold)
-///   code = 1 or code = 2 or code = 4  indicates a face
-///   code = 3 or code = 5 or code = 6  indicates an edge
-///   code = 7 indicates a corner
-uint box_closest_feature(const real3& dir, const real3& hdims) {
-    real threshold = 0.01;
-    return ((Abs(dir.x) > threshold) << 0) | ((Abs(dir.y) > threshold) << 1) | ((Abs(dir.z) > threshold) << 2);
+    return corner;
 }
 
 /// This function returns a boolean indicating whether or not a box1 with

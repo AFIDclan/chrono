@@ -109,7 +109,7 @@ TEST(ChNarrowphaseR, snap_to_cylinder) {
     }
 }
 
-TEST(ChNarrowphaseR, snap_to_face_box) {
+TEST(ChNarrowphaseR, snap_to_box_face) {
     {
         {
             // z dir / in range
@@ -117,7 +117,7 @@ TEST(ChNarrowphaseR, snap_to_face_box) {
             real3 hdims(1.0, 2.0, 3.0);
             real3 pt_to_snap(0.1, 0.3, 2.0);
             uint code = 1 << 2;
-            real3 result = snap_to_face_box(pt_on_box, code, pt_to_snap, hdims);
+            real3 result = snap_to_box_face(hdims, pt_on_box, code, pt_to_snap);
             Assert_near(result, real3(0.1, 0.3, 3.0), precision);
         }
 
@@ -127,7 +127,7 @@ TEST(ChNarrowphaseR, snap_to_face_box) {
             real3 hdims(1.0, 2.0, 3.0);
             real3 pt_to_snap(1.7, -2.5, 4.0);
             uint code = 1 << 2;
-            real3 result = snap_to_face_box(pt_on_box, code, pt_to_snap, hdims);
+            real3 result = snap_to_box_face(hdims, pt_on_box, code, pt_to_snap);
             Assert_near(result, real3(1.0, -2.0, 3.0), precision);
         }
     }
@@ -230,7 +230,7 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_TRUE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
             Assert_near(result, real3(-1, 1.4, 2), precision);
         }
 
@@ -243,7 +243,7 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_TRUE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
             Assert_near(result, real3(0.5, 2, 2), precision);
         }
 
@@ -256,7 +256,7 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_TRUE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_TRUE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
             Assert_near(result, real3(0.4, 0.8, 3), precision);
         }
 
@@ -269,7 +269,7 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_FALSE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
         }
 
         {
@@ -281,7 +281,7 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_FALSE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
         }
 
         {
@@ -293,12 +293,12 @@ TEST(ChNarrowphaseR, point_contact_face) {
             real3 result;
             real dist;
 
-            ASSERT_FALSE(point_contact_face(pt_on_face, code, pt_to_snap, result, dist, hdims));
+            ASSERT_FALSE(point_contact_face(hdims, pt_on_face, code, pt_to_snap, result, dist));
         }
     }
 }
 
-TEST(ChNarrowphaseR, edge_contact_edge) {
+TEST(ChNarrowphaseR, segment_contact_edge) {
     {
         {
             real3 pt_on_edge(1, 2, 3);
@@ -310,7 +310,7 @@ TEST(ChNarrowphaseR, edge_contact_edge) {
             real3 loc1;
             real3 loc2;
 
-            ASSERT_TRUE(edge_contact_edge(pt_on_edge, code, pt_1, pt_2, loc1, loc2, hdims));
+            ASSERT_TRUE(segment_contact_edge(hdims, pt_on_edge, code, pt_1, pt_2, loc1, loc2));
             Assert_near(loc1, real3(1, 0.2, 3), precision);
             Assert_near(loc2, real3(1, 0.2, 2.5), precision);
         }
