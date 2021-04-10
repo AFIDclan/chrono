@@ -174,7 +174,7 @@ uint snap_to_cylinder(const real& rad, const real& hlen, real3& loc) {
 ///   code = 3 or code = 5 or code = 6  indicates an edge
 ///   code = 7 indicates a corner
 uint box_closest_feature(const real3& dir, const real3& hdims) {
-    real threshold = 0.02;
+    real threshold = 0.01;  // corresponds to about 0.57 degrees
     return ((Abs(dir.x) > threshold) << 0) | ((Abs(dir.y) > threshold) << 1) | ((Abs(dir.z) > threshold) << 2);
 }
 
@@ -448,7 +448,7 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
 
     // Test the axes of the 1st box.
     for (uint i = 0; i < 3; i++) {
-        real r2 = Rabs(0, i) * hdims2[0] + Rabs(1, i) * hdims2[1] + Rabs(2, i) * hdims2[2];
+        real r2 = Rabs(i, 0) * hdims2[0] + Rabs(i, 1) * hdims2[1] + Rabs(i, 2) * hdims2[2];
         real overlap = hdims1[i] + r2 - abs(pos[i]);
 
         if (overlap <= 0)
@@ -463,14 +463,14 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
 
     // Test the axes of the 2nd box.
     for (uint i = 0; i < 3; i++) {
-        real r1 = Rabs(i, 0) * hdims1[0] + Rabs(i, 1) * hdims1[1] + Rabs(i, 2) * hdims1[2];
-        real overlap = hdims2[i] + r1 - abs(R(i, 0) * pos[0] + R(i, 1) * pos[1] + R(i, 2) * pos[2]);
+        real r1 = Rabs(0, i) * hdims1[0] + Rabs(1, i) * hdims1[1] + Rabs(2, i) * hdims1[2];
+        real overlap = r1 + hdims2[i] - abs(R(0, i) * pos[0] + R(1, i) * pos[1] + R(2, i) * pos[2]);
 
         if (overlap <= 0)
             return false;
 
         if (overlap < minOverlap) {
-            dir = real3(R(i, 0), R(i, 1), R(i, 2));
+            dir = real3(R(0, i), R(1, i), R(2, i));
             minOverlap = overlap;
         }
     }
@@ -481,15 +481,15 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
             real3 crossProd;
 
             crossProd[x1] = 0;
-            crossProd[y1] = -R(x2, z1);
-            crossProd[z1] = R(x2, y1);
+            crossProd[y1] = -R(z1, x2);
+            crossProd[z1] = R(y1, x2);
 
             real lengthSqr = Dot(crossProd);
 
             if (lengthSqr > 1e-6) {
-                real r1 = hdims1[y1] * Rabs(x2, z1) + hdims1[z1] * Rabs(x2, y1);
-                real r2 = hdims2[y2] * Rabs(z2, x1) + hdims2[z2] * Rabs(y2, x1);
-                real overlap = r1 + r2 - abs(pos[z1] * R(x2, y1) - pos[y1] * R(x2, z1));
+                real r1 = hdims1[y1] * Rabs(z1, x2) + hdims1[z1] * Rabs(y1, x2);
+                real r2 = hdims2[y2] * Rabs(x1, z2) + hdims2[z2] * Rabs(x1, y2);
+                real overlap = r1 + r2 - abs(pos[z1] * R(y1, x2) - pos[y1] * R(z1, x2));
 
                 if (overlap <= 0)
                     return false;
