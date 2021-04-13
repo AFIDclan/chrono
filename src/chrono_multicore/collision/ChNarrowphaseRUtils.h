@@ -433,15 +433,32 @@ real3 box_closest_corner(const real3& hdims, const real3& dir) {
     return corner;
 }
 
-/// This function returns a boolean indicating whether or not a box1 with
-/// dimensions hdims1 intersects a second box with the dimensions hdims2.
+/// This function returns an integer indicating whether or not a box1 with
+/// dimensions hdims1 intersects (or is close enough to) a second box with
+/// dimensions hdims2.
 /// The check is performed in the local frame of box1. The transform from the
-/// other box is given through 'pos' and 'rot'. If an intersection exists, the
-/// direction of smallest intersection is returned in 'dir'.
+/// other box is given through 'pos' and 'rot'. 
+/// 
+/// The return value is -1 if the two boxes overlap, +1 if they are within
+/// a distance of 'separation' from each other, and 0 if they are "far" from
+/// each other.
+/// If returning -1 or +1, 'dir' contains the direction of smallest intersection
+/// (or closest separation).
 ///
 /// This check is performed by testing 15 possible separating planes between the
 /// two boxes (Gottschalk, Lin, Manocha - Siggraph96).
-bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& pos, const quaternion& rot, real3& dir) {
+/// 
+/// If not considering a separation value, the 15 tests use an overlap of the form:
+///    overlap = r1 + r2 - D
+/// where r1 and r2 are the half-projections of the two boxes on the current direction
+/// and D is the projected distance between the box centers. If there's no overlap
+/// (overlap <= 0) in any direction, then the boxes do not intersect. Otherwise, we
+/// keep track of the direction of minimum overlap.
+/// 
+/// If considering a separation > 0, we simply use an overlap of the form:
+///    overlap = r1 + r2 - D + separation
+/// and use the exact same checks.
+int box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& pos, const quaternion& rot, real separation, real3& dir) {
     Mat33 R(rot);
     Mat33 Rabs = Abs(R);
     real minOverlap = C_LARGE_REAL;
@@ -449,10 +466,10 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
     // Test the axes of the 1st box.
     for (uint i = 0; i < 3; i++) {
         real r2 = Rabs(i, 0) * hdims2[0] + Rabs(i, 1) * hdims2[1] + Rabs(i, 2) * hdims2[2];
-        real overlap = hdims1[i] + r2 - abs(pos[i]);
+        real overlap = hdims1[i] + r2 - abs(pos[i]) + separation;
 
         if (overlap <= 0)
-            return false;
+            return 0;
 
         if (overlap < minOverlap) {
             dir = real3(0);
@@ -464,10 +481,10 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
     // Test the axes of the 2nd box.
     for (uint i = 0; i < 3; i++) {
         real r1 = Rabs(0, i) * hdims1[0] + Rabs(1, i) * hdims1[1] + Rabs(2, i) * hdims1[2];
-        real overlap = r1 + hdims2[i] - abs(R(0, i) * pos[0] + R(1, i) * pos[1] + R(2, i) * pos[2]);
+        real overlap = r1 + hdims2[i] - abs(R(0, i) * pos[0] + R(1, i) * pos[1] + R(2, i) * pos[2]) + separation;
 
         if (overlap <= 0)
-            return false;
+            return 0;
 
         if (overlap < minOverlap) {
             dir = real3(R(0, i), R(1, i), R(2, i));
@@ -489,10 +506,10 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
             if (lengthSqr > 1e-6) {
                 real r1 = hdims1[y1] * Rabs(z1, x2) + hdims1[z1] * Rabs(y1, x2);
                 real r2 = hdims2[y2] * Rabs(x1, z2) + hdims2[z2] * Rabs(x1, y2);
-                real overlap = r1 + r2 - abs(pos[z1] * R(y1, x2) - pos[y1] * R(z1, x2));
+                real overlap = r1 + r2 - abs(pos[z1] * R(y1, x2) - pos[y1] * R(z1, x2)) + separation;
 
                 if (overlap <= 0)
-                    return false;
+                    return 0;
 
                 real ooLen = 1 / Sqrt(lengthSqr);
 
@@ -505,7 +522,9 @@ bool box_intersects_box(const real3& hdims1, const real3& hdims2, const real3& p
         }
     }
 
-    return true;
+    // If minOverlap is larger than the specified separation, the boxes actually penetrate.
+    // Otherwise, they are separated (but not by more that 'separation').
+    return (minOverlap >= separation) ? -1 : +1;
 }
 
 /// @} multicore_colision

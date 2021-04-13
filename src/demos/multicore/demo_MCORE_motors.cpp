@@ -312,7 +312,7 @@ void ExampleB1(ChSystem& mphysicalSystem, std::shared_ptr<ChMaterialSurface> mat
     // Create a ChFunction to be used for the ChLinkMotorLinearPosition
     auto msine = chrono_types::make_shared<ChFunction_Sine>(0,    // phase
                                                             0.5,  // frequency
-                                                            1.6   // amplitude
+                                                            1.4   // amplitude
     );
     // Let the motor use this motion function:
     motor1->SetMotionFunction(msine);
@@ -520,6 +520,7 @@ int main(int argc, char* argv[]) {
         case chrono::ChContactMethod::NSC: {
             auto sysNSC = new ChSystemMulticoreNSC;
             sysNSC->ChangeSolverType(SolverType::BB);
+            sysNSC->GetSettings()->collision.collision_envelope = 0.005;
             sys = sysNSC;
             auto materialNSC = chrono_types::make_shared<ChMaterialSurfaceNSC>();
             material = materialNSC;

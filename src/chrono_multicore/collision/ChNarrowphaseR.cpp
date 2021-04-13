@@ -217,8 +217,8 @@ bool RCollision(const ConvexBase* shapeA,  // first candidate shape
     }
 
     if (shapeA->Type() == ChCollisionShape::Type::BOX && shapeB->Type() == ChCollisionShape::Type::BOX) {
-        nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), ct_norm,
-                     ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
+        nC = box_box(shapeA->A(), shapeA->R(), shapeA->Box(), shapeB->A(), shapeB->R(), shapeB->Box(), separation,
+                     ct_norm, ct_depth, ct_pt1, ct_pt2, ct_eff_rad);
 
         ////std::cout << nC << std::endl;
         ////for (int j = 0; j < nC; j++) {
@@ -1093,6 +1093,7 @@ int box_box(const real3& posT,
             const real3& posO,
             const quaternion& rotO,
             const real3& hdimsO,
+            const real& separation,
             real3* norm,
             real* depth,
             real3* ptT,
@@ -1103,14 +1104,18 @@ int box_box(const real3& posT,
     real3 pos = RotateT(posO - posT, rotT);
     quaternion rot = Mult(Inv(rotT), rotO);
 
-    // Find the direction of smallest overlap between boxes. If the two boxes don't overlap, we're done.
-    // Note that dirT is calculated so that it points from boxO to boxT and is expressed in the frame of boxT.
+    // Find the direction of smallest overlap between boxes. Note that dirT is calculated so that it points
+    // from boxO to boxT and is expressed in the frame of boxT. If the two boxes don't overlap, we're done.
+    // Otherwise, penetrated = -1 if the boxes overlap or +1 if they are separated.
     real3 dirT;
-    if (!box_intersects_box(hdimsT, hdimsO, pos, rot, dirT))
+    int penetrated = box_intersects_box(hdimsT, hdimsO, pos, rot, separation, dirT);
+    if (penetrated == 0)
         return 0;
-
     if (Dot(pos, dirT) > 0)
         dirT = -dirT;
+
+    // If separation = 0, then penetrated must be -1.
+    assert(separation > 0 || penetrated == -1);
 
     // Determine the features of the boxes that are interacting.
     // A feature is defined by a box corner and a code (7 for corner; 3,5,6 for an edge; 1,2,4 for a face).
@@ -1150,10 +1155,10 @@ int box_box(const real3& posT,
 
         *(ptT) = Rotate(cornerT, rotT) + posT;
         *(ptO) = Rotate(cornerO, rotO) + posO;
-        real3 delta = *(ptT) - *(ptO);
+        real3 delta = penetrated * (*(ptO) - *(ptT));
         real dist = Sqrt(Dot(delta, delta));
         *(norm) = delta / dist;
-        *(depth) = -dist;
+        *(depth) = penetrated * dist;
         *(eff_radius) = edge_radius / 2;
 
         return 1;
@@ -1173,10 +1178,10 @@ int box_box(const real3& posT,
         if (segment_contact_edge(hdimsT, cornerT, codeT, corner0, corner1, locT, locO)) {
             *(ptT) = Rotate(locT, rotT) + posT;
             *(ptO) = Rotate(locO, rotT) + posT;
-            real3 delta = *(ptT) - *(ptO);
+            real3 delta = penetrated * (*(ptO) - *(ptT));
             real dist = Sqrt(Dot(delta, delta));
             *(norm) = delta / dist;
-            *(depth) = -dist;
+            *(depth) = penetrated * dist;
             *(eff_radius) = edge_radius / 2;
             return 1;
         }
@@ -1206,7 +1211,7 @@ int box_box(const real3& posT,
                 locT = Rotate(locT, rotT) + posT;
                 locO = Rotate(cornersO[i], rotO) + posO;
 
-                real3 delta = locT - locO;
+                real3 delta = penetrated * (locO - locT);
                 real dist = Sqrt(Dot(delta, delta));
                 if (dist < 1e-6) {
                     continue;
@@ -1214,7 +1219,7 @@ int box_box(const real3& posT,
                 *(ptT + j) = locT;
                 *(ptO + j) = locO;
                 *(norm + j) = delta / dist;
-                *(depth + j) = -dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1224,7 +1229,7 @@ int box_box(const real3& posT,
                 locT = Rotate(cornersT[i], rotT) + posT;
                 locO = Rotate(locO, rotO) + posO;
 
-                real3 delta = locT - locO;
+                real3 delta = penetrated * (locO - locT);
                 real dist = Sqrt(Dot(delta, delta));
                 if (dist < 1e-6) {
                     continue;
@@ -1232,7 +1237,7 @@ int box_box(const real3& posT,
                 *(ptT + j) = locT;
                 *(ptO + j) = locO;
                 *(norm + j) = delta / dist;
-                *(depth + j) = -dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1253,13 +1258,13 @@ int box_box(const real3& posT,
                     locT = Rotate(locT, rotT) + posT;
                     locO = Rotate(locO, rotT) + posT;
 
+                    real3 delta = penetrated * (locO - locT);
+                    real dist = Sqrt(Dot(delta, delta));
+
                     *(ptT + j) = locT;
                     *(ptO + j) = locO;
-
-                    real3 delta = locT - locO;
-                    real dist = Sqrt(Dot(delta, delta));
                     *(norm + j) = delta / dist;
-                    *(depth + j) = -dist;
+                    *(depth + j) = penetrated * dist;
                     *(eff_radius + j) = edge_radius / 2;
                     j++;
                 }
@@ -1292,10 +1297,16 @@ int box_box(const real3& posT,
                 real3 tempT = Rotate(locT, rotT) + posT;
                 real3 tempO = Rotate(cornersO[i], rotO) + posO;
 
+                real3 delta = penetrated * (tempO - tempT);
+                real dist = Sqrt(Dot(delta, delta));
+                if (dist < 1e-6) {
+                    continue;
+                }
+
                 *(ptT + j) = tempT;
                 *(ptO + j) = tempO;
-                *(norm + j) = -dirT;
-                *(depth + j) = -distance;
+                *(norm + j) = delta / dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1310,18 +1321,16 @@ int box_box(const real3& posT,
                 real3 tempT = Rotate(locT, rotO) + posO;
                 real3 tempO = Rotate(locO, rotO) + posO;
 
-                real3 delta = tempT - tempO;
+                real3 delta = penetrated * (tempO - tempT);
                 real dist = Sqrt(Dot(delta, delta));
-
                 if (dist < 1e-6) {
                     continue;
                 }
 
-                *(ptT + j) = locT;
-                *(ptO + j) = locO;
-
+                *(ptT + j) = tempT;
+                *(ptO + j) = tempO;
                 *(norm + j) = delta / dist;
-                *(depth + j) = -dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1352,9 +1361,8 @@ int box_box(const real3& posT,
                 real3 tempT = Rotate(cornersT[i], rotT) + posT;
                 real3 tempO = Rotate(locO, rotO) + posO;
 
-                real3 delta = tempT - tempO;
+                real3 delta = penetrated * (tempO - tempT);
                 real dist = Sqrt(Dot(delta, delta));
-
                 if (dist < 1e-6) {
                     continue;
                 }
@@ -1362,7 +1370,7 @@ int box_box(const real3& posT,
                 *(ptT + j) = tempT;
                 *(ptO + j) = tempO;
                 *(norm + j) = delta / dist;
-                *(depth + j) = -dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }
@@ -1377,18 +1385,16 @@ int box_box(const real3& posT,
                 real3 tempT = Rotate(locT, rotT) + posT;
                 real3 tempO = Rotate(locO, rotT) + posT;
 
-                real3 delta = tempT - tempO;
+                real3 delta = penetrated *(tempO - tempT);
                 real dist = Sqrt(Dot(delta, delta));
-
                 if (dist < 1e-6) {
                     continue;
                 }
 
                 *(ptT + j) = tempT;
                 *(ptO + j) = tempO;
-
                 *(norm + j) = delta / dist;
-                *(depth + j) = -dist;
+                *(depth + j) = penetrated * dist;
                 *(eff_radius + j) = edge_radius;
                 j++;
             }

@@ -182,13 +182,14 @@ int box_cylshell(const real3& pos1,
                  real3* pt2,
                  real* eff_radius);
 
-/// Analytical box vs. box collision function (not yet completed).
+/// Analytical box vs. box collision function.
 int box_box(const real3& pos1,
             const quaternion& rot1,
             const real3& hdims1,
             const real3& pos2,
             const quaternion& rot2,
             const real3& hdims2,
+            const real& separation,
             real3* norm,
             real* depth,
             real3* pt1,
