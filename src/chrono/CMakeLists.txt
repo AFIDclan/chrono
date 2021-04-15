@@ -216,6 +216,7 @@ set(ChronoEngine_physics_links_SOURCES
     physics/ChLinkSpring.cpp
     physics/ChLinkSpringCB.cpp
     physics/ChLinkRotSpringCB.cpp
+    physics/ChLinkRotSpring.cpp
     physics/ChLinkClearance.cpp
     physics/ChLinkPointSpline.cpp
     physics/ChLinkTrajectory.cpp
@@ -260,6 +261,7 @@ set(ChronoEngine_physics_links_HEADERS
     physics/ChLinkSpring.h
     physics/ChLinkSpringCB.h
     physics/ChLinkRotSpringCB.h
+    physics/ChLinkRotSpring.h
     physics/ChLinkTrajectory.h
     physics/ChLinkClearance.h
     physics/ChLinkMate.h
