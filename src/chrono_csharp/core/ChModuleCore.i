@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////
-//  
+//
 //   ChModuleCore.i
 //
 //   SWIG configuration file.
@@ -38,7 +38,7 @@
 
 
 // For optional downcasting of polimorphic objects:
-%include "../chrono_downcast.i" 
+%include "../chrono_downcast.i"
 
 // For supporting shared pointers:
 %include <std_shared_ptr.i>
@@ -87,7 +87,7 @@ using namespace chrono::fea;
 
 
 // Undefine ChApi otherwise SWIG gives a syntax error
-#define ChApi 
+#define ChApi
 #define EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 #define CH_DEPRECATED(msg)
 
@@ -98,7 +98,7 @@ using namespace chrono::fea;
 // Cross-inheritance between Python and c++ for callbacks that must be inherited.
 // Put this 'director' feature _before_ class wrapping declaration.
 
-// Include other .i configuration files for SWIG. 
+// Include other .i configuration files for SWIG.
 // These are divided in many .i files, each per a
 // different c++ class, when possible.
 
@@ -114,8 +114,8 @@ using namespace chrono::fea;
 
 
 //
-// For each class, keep updated the  A, B, C sections: 
-// 
+// For each class, keep updated the  A, B, C sections:
+//
 
 
 //
@@ -123,7 +123,7 @@ using namespace chrono::fea;
 //
 // Note that this must be done for almost all objects (not only those that are
 // handled by shered pointers in C++, but all their chidren and parent classes. It
-// is enough that a single class in an inheritance tree uses %shared_ptr, and all other in the 
+// is enough that a single class in an inheritance tree uses %shared_ptr, and all other in the
 // tree must be promoted to %shared_ptr too).
 
 %shared_ptr(chrono::ChFrame<double>)
@@ -131,12 +131,12 @@ using namespace chrono::fea;
 
 //%shared_ptr(chrono::ChColor)
 %shared_ptr(chrono::ChObjShapeFile)
-%shared_ptr(chrono::ChBoxShape) 
+%shared_ptr(chrono::ChBoxShape)
 %shared_ptr(chrono::ChSphereShape)
 %shared_ptr(chrono::ChEllipsoidShape)
 %shared_ptr(chrono::ChVisualMaterial)
 %shared_ptr(chrono::ChCylinderShape)
-%shared_ptr(chrono::ChCamera) 
+%shared_ptr(chrono::ChCamera)
 %shared_ptr(chrono::ChLineShape)
 %shared_ptr(chrono::ChSurfaceShape)
 %shared_ptr(chrono::ChPathShape)
@@ -147,7 +147,7 @@ using namespace chrono::fea;
 %shared_ptr(chrono::ChBezierCurve)
 %shared_ptr(chrono::ChGlyphs)
 
-%shared_ptr(chrono::ChFunction)  
+%shared_ptr(chrono::ChFunction)
 %shared_ptr(chrono::ChFunction_Const)
 %shared_ptr(chrono::ChFunction_ConstAcc)
 %shared_ptr(chrono::ChFunction_Derive)
@@ -281,17 +281,17 @@ using namespace chrono::fea;
 // B- INCLUDE HEADERS
 //
 //
-// 1) 
-//    When including with %include all the .i files, make sure that 
+// 1)
+//    When including with %include all the .i files, make sure that
 // the .i of a derived class is included AFTER the .i of
 // a base class, otherwise SWIG is not able to build the type
-// infos. 
+// infos.
 //
 // 2)
 //    Then, this said, if one member function in Foo_B.i returns
 // an object of Foo_A.i (or uses it as a parameter) and yet you must %include
 // A before B, ex.because of rule 1), a 'forward reference' to A must be done in
-// B by. Seems that it is enough to write 
+// B by. Seems that it is enough to write
 //  mynamespace { class myclass; }
 // in the .i file, before the %include of the .h, even if already forwarded in .h
 
@@ -387,8 +387,8 @@ using namespace chrono::fea;
 %include "ChLinkGear.i"
 %include "ChLinkRevolute.i"
 %include "ChLinkRevoluteSpherical.i"
-%include "ChLinkUniversal.i" 
-%include "ChLinkTrajectory.i" 
+%include "ChLinkUniversal.i"
+%include "ChLinkTrajectory.i"
 %include "ChLinkPointSpline.i"
 %include "../../chrono/physics/ChLinkMotionImposed.h"
 %include "ChAssembly.i"
@@ -414,12 +414,12 @@ using namespace chrono::fea;
 
 //
 // C- DOWNCASTING OF SHARED POINTERS
-// 
-// This is not automatic in Python + SWIG, except if one uses the 
+//
+// This is not automatic in Python + SWIG, except if one uses the
 // %downcast_output_sharedptr(...) macro, as above, but this causes
 // a lot of code bloat. So in the following we create a set of Python-side
-// functions to perform casting by hand, thank to the macro 
-// %DefSharedPtrDynamicDowncast(base,derived). 
+// functions to perform casting by hand, thank to the macro
+// %DefSharedPtrDynamicDowncast(base,derived).
 // Do not specify the "chrono::" namespace before base or derived!
 // Later, in python, you can do the following:
 //  myvis = chrono.CastToChVisualizationShared(myasset)
@@ -491,6 +491,7 @@ using namespace chrono::fea;
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkSpring)
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkTSDA)
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkRotSpringCB)
+%DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkRotSpring)
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkMotor)
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkMotorLinear)
 %DefSharedPtrDynamicDowncast(chrono,ChPhysicsItem, ChLinkMotorLinearDriveline)
@@ -534,7 +535,7 @@ using namespace chrono::fea;
 %DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkScrew)
 %DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkSpring)
 %DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkTSDA)
-%DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkPointSpline) 
+%DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkPointSpline)
 %DefSharedPtrDynamicDowncast(chrono,ChLink, ChLinkTrajectory)
 
 %DefSharedPtrDynamicDowncast(chrono,ChFunction, ChFunction_Const)
@@ -581,6 +582,3 @@ using namespace chrono::fea;
 %DefSharedPtrDynamicDowncast(chrono::geometry,ChGeometry, ChTriangleMeshSoup)
 
 // .. to complete
-
-
-
